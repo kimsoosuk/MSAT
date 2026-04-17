@@ -3431,37 +3431,6 @@
       const content = el("div", { class: "report-content" });
       content.innerHTML = contentHtml;
 
-      // Wrap the strongest/weakest/solution markers with special classes
-      // We instruct Gemini to use ::STRONG::, ::WEAK::, ::SOL:: markers at start of h4s
-      content.querySelectorAll("h4, h5").forEach(h => {
-        const t = h.textContent.trim();
-        let tag = "", cls = "";
-        if (t.startsWith("[강점]")) { cls = "strength-block"; tag = "강점"; h.textContent = t.replace("[강점]", "").trim(); }
-        else if (t.startsWith("[약점]")) { cls = "weakness-block"; tag = "약점"; h.textContent = t.replace("[약점]", "").trim(); }
-        else if (t.startsWith("[솔루션]")) { cls = "solution-card"; tag = "솔루션"; h.textContent = t.replace("[솔루션]", "").trim(); h.className = "sol-title"; }
-        if (cls) {
-          // Wrap h4 + next sibling (p or ul) into a block
-          const wrapper = document.createElement("div");
-          wrapper.className = cls;
-          if (tag && cls !== "solution-card") {
-            const tagEl = document.createElement("div");
-            tagEl.className = "tag";
-            tagEl.textContent = tag;
-            wrapper.appendChild(tagEl);
-          }
-          const parent = h.parentNode;
-          parent.insertBefore(wrapper, h);
-          wrapper.appendChild(h);
-          // Move following siblings until next h3/h4/h5 into wrapper
-          let next = wrapper.nextSibling;
-          while (next && next.nodeType === 1 && !["H3", "H4", "H5"].includes(next.tagName)) {
-            const toMove = next;
-            next = next.nextSibling;
-            wrapper.appendChild(toMove);
-          }
-        }
-      });
-
       container.append(content);
 
     }
@@ -3486,29 +3455,15 @@
       const opt = {
         margin: [10, 0, 15, 0], // top, left, bottom, right in mm
         filename: `${state.studentName || '학생'}_사고력_리포트.pdf`,
-        image: { type: 'png' }, // PNG prevents any JPEG compression artifacts (haziness)
-        html2canvas: { scale: 4, useCORS: true, scrollY: 0, backgroundColor: '#ffffff' },
+        image: { type: 'jpeg', quality: 0.95 }, 
+        html2canvas: { scale: 2.5, useCORS: true, scrollY: 0, backgroundColor: '#ffffff' },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
 
-      // Also hide the HTML footer so we can draw it cleanly on every PDF page
-      const htmlFooter = element.querySelector('.global-footer');
-      if (htmlFooter) htmlFooter.style.display = 'none';
-
-      html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
-        // Draw the footer on every page
-        const totalPages = pdf.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-          pdf.setPage(i);
-          pdf.setFontSize(10);
-          pdf.setTextColor(150);
-          pdf.text('©지혜의산실', 105, pdf.internal.pageSize.getHeight() - 8, null, null, 'center');
-        }
-      }).save().then(() => {
-        // Restore actions and footer
+      html2pdf().set(opt).from(element).save().then(() => {
+        // Restore actions
         if (actions) actions.style.display = '';
-        if (htmlFooter) htmlFooter.style.display = '';
       });
     }
 
