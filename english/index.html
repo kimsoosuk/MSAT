@@ -3387,8 +3387,12 @@
       //    This catches patterns like: "...\n**이 사고력의 의미:**" where there's only a single \n
       md = md.replace(/([^\n])\n\*\*/g, "$1\n\n**");
 
-      // 3) Inline list dashes: ". - **Why" → ".\n- **Why"
-      md = md.replace(/([.!?])\s*-\s+\*\*(Why|What|How)/g, "$1\n\n- **$2");
+      // 3) Split " - **Why/What/How" onto its own line no matter what precedes it
+      //    This handles: "#### Title - **Why(...):**" and inline dashes alike
+      md = md.replace(/\s+-\s+\*\*(Why|What|How)/g, "\n\n- **$1");
+
+      // 4) Also handle non-bold variant: " - Why (...)"
+      md = md.replace(/\s+-\s+(Why|What|How)\s*\(/g, "\n\n- **$1** (");
 
       // Escape base HTML
       md = md.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -3457,25 +3461,36 @@
     function generatePDF() {
       const element = document.getElementById('view-result');
 
-      // Temporarily hide action buttons so they are not in the PDF
+      // Hide buttons from PDF
       const actions = element.querySelector('.report-actions');
       if (actions) actions.style.display = 'none';
-
-      // ★ Kill the body::before texture overlay so it doesn't fog the PDF
-      document.body.classList.add('pdf-capture');
 
       const opt = {
         margin: [10, 0, 15, 0],
         filename: `${state.studentName || '학생'}_사고력_리포트.pdf`,
-        image: { type: 'jpeg', quality: 0.92 },
-        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          scrollY: 0,
+          // ★ KEY: null = don't paint a white base layer.
+          //   html2canvas defaults to #ffffff which washes out the warm page bg.
+          //   null tells it to capture the actual CSS backgrounds as-is.
+          backgroundColor: null,
+          onclone: function(clonedDoc) {
+            // Only remove the fixed dot-pattern overlay (body::before)
+            // Do NOT touch the body background — we want the real page colors
+            var s = clonedDoc.createElement('style');
+            s.textContent = 'body::before { display:none !important; }';
+            clonedDoc.head.appendChild(s);
+          }
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
 
       html2pdf().set(opt).from(element).save().then(() => {
         if (actions) actions.style.display = '';
-        document.body.classList.remove('pdf-capture');
       });
     }
 
