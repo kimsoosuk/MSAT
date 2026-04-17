@@ -3366,10 +3366,14 @@
       );
     }
 
-    /* Very small markdown renderer tailored for Gemini output */
     function miniMarkdown(md) {
       // Normalize
       md = md.replace(/\r\n/g, "\n");
+      md = md.replace(/\|mn/g, "\n"); // catch hallucinated typos
+      
+      // Force double newlines before headers so block splitting works reliably
+      md = md.replace(/\n+(#+\s+)/g, "\n\n$1");
+
       // Escape base HTML
       md = md.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -3429,7 +3433,7 @@
 
       // Wrap the strongest/weakest/solution markers with special classes
       // We instruct Gemini to use ::STRONG::, ::WEAK::, ::SOL:: markers at start of h4s
-      content.querySelectorAll("h4").forEach(h => {
+      content.querySelectorAll("h4, h5").forEach(h => {
         const t = h.textContent.trim();
         let tag = "", cls = "";
         if (t.startsWith("[강점]")) { cls = "strength-block"; tag = "강점"; h.textContent = t.replace("[강점]", "").trim(); }
@@ -3448,9 +3452,9 @@
           const parent = h.parentNode;
           parent.insertBefore(wrapper, h);
           wrapper.appendChild(h);
-          // Move following siblings until next h3/h4 into wrapper
+          // Move following siblings until next h3/h4/h5 into wrapper
           let next = wrapper.nextSibling;
-          while (next && next.nodeType === 1 && !["H3", "H4"].includes(next.tagName)) {
+          while (next && next.nodeType === 1 && !["H3", "H4", "H5"].includes(next.tagName)) {
             const toMove = next;
             next = next.nextSibling;
             wrapper.appendChild(toMove);
