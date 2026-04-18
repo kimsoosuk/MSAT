@@ -1,0 +1,19 @@
+# Node
+node_modules/
+package-lock.json
+
+# Wrangler
+.wrangler/
+.dev.vars
+dist/
+
+# Mac
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Env
+.env
+.env.local
