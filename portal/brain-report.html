@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#1a1612" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>MSAT · 사고력 통합 리포트 (관리자)</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300..700&family=Noto+Serif+KR:wght@400..700&family=Noto+Sans+KR:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="../shared/styles.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ============ Admin gate ============ */
+    .gate {
+      max-width: 440px;
+      margin: 80px auto;
+      padding: 40px 32px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      text-align: center;
+    }
+    .gate-title {
+      font-family: var(--serif);
+      font-size: 1.4rem;
+      margin: 0 0 8px;
+      color: var(--ink);
+    }
+    .gate-sub {
+      font-family: var(--serif);
+      font-style: italic;
+      color: var(--ink-3);
+      font-size: 0.92rem;
+      margin-bottom: 24px;
+    }
+    .gate-input {
+      width: 100%;
+      font-family: var(--mono);
+      font-size: 1rem;
+      padding: 10px 4px;
+      border: none;
+      border-bottom: 1.5px solid var(--line-2);
+      background: transparent;
+      outline: none;
+      text-align: center;
+      letter-spacing: 0.2em;
+    }
+    .gate-input:focus { border-bottom-color: var(--accent); border-bottom-width: 2px; padding-bottom: 9px; }
+    .gate-msg {
+      margin-top: 14px;
+      min-height: 18px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    /* ============ Body ============ */
+    .admin-header {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 24px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .admin-header h1 {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: 1.5rem;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+    .admin-header h1 em { font-style: italic; color: var(--accent); }
+    .admin-header .badge {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      padding: 3px 10px;
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    /* Student chooser */
+    .admin-chooser {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .student-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .student-entry {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+      transition: all .15s;
+    }
+    .student-entry:hover { box-shadow: var(--shadow-sm); border-color: var(--line-2); }
+    .student-entry-main {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .student-entry-name {
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      font-weight: 500;
+      color: var(--ink);
+    }
+    .student-entry-id {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--ink-4);
+      letter-spacing: 0.04em;
+    }
+    .student-entry-subjects {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .subject-chip {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: var(--bg-2);
+      color: var(--ink-3);
+    }
+    .subject-chip.done {
+      background: var(--success);
+      color: var(--paper);
+    }
+
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+      font-family: var(--serif);
+      font-style: italic;
+      color: var(--ink-3);
+    }
+
+    /* Report body reused from common styles */
+    .admin-body {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Admin gate (password prompt) -->
+    <div id="gate-view" class="view active">
+      <div class="gate">
+        <h2 class="gate-title">관리자 인증</h2>
+        <p class="gate-sub">사고력 통합 리포트는 관리자만 열람할 수 있습니다.</p>
+        <input type="password" class="gate-input" id="gate-input" placeholder="ACCESS KEY" autocomplete="off" />
+        <div class="gate-msg" id="gate-msg"></div>
+      </div>
+    </div>
+
+    <!-- Student chooser -->
+    <div id="chooser-view" class="view">
+      <header class="admin-header">
+        <h1>MSAT · <em>Brain Report</em></h1>
+        <span class="badge">Admin</span>
+      </header>
+      <div class="admin-chooser">
+        <p style="font-family:var(--serif); color:var(--ink-3); font-style:italic; margin: 0 0 6px;">
+          이 기기에 저장된 학생 기록 목록입니다. 통합 리포트를 볼 학생을 선택하세요.
+        </p>
+        <div class="student-list" id="student-list"></div>
+      </div>
+    </div>
+
+    <!-- Report view -->
+    <div id="report-view" class="view">
+      <header class="admin-header">
+        <h1>MSAT · <em>Brain Report</em></h1>
+        <span class="badge">Admin</span>
+      </header>
+      <div class="admin-body" id="view-result">
+        <!-- Contents injected by brain-report.js logic -->
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      REGIONS, REGION_KEYS, WORDS,
+      loadAllResults, WORKER_URL,
+    } from "../shared/data.js";
+
+    /* ============================================================
+       Admin access key — URL query 또는 입력 (클라이언트측 기본 보호)
+       생산 환경에서는 더 강한 보호(IP 제한, auth 프록시 등)를 권장.
+       ============================================================ */
+    const ADMIN_KEY = "msat-admin-2026";  // 이 값을 변경하여 접근 제한
+
+    const $  = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+
+    function showView(id) {
+      $$(".view").forEach(v => v.classList.remove("active"));
+      const v = document.getElementById(id);
+      if (v) v.classList.add("active");
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+
+    // URL 쿼리로 인증 bypass 가능 (북마크용)
+    const params = new URLSearchParams(location.search);
+    const queryKey = params.get("key");
+    if (queryKey === ADMIN_KEY) {
+      sessionStorage.setItem("msat.admin", "1");
+    }
+
+    const isAuthed = sessionStorage.getItem("msat.admin") === "1";
+    if (isAuthed) {
+      showChooser();
+    } else {
+      setupGate();
+    }
+
+    function setupGate() {
+      const input = $("#gate-input");
+      const msg = $("#gate-msg");
+      input.focus();
+      input.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        if (input.value === ADMIN_KEY) {
+          sessionStorage.setItem("msat.admin", "1");
+          msg.textContent = "";
+          showChooser();
+        } else {
+          msg.textContent = "잘못된 키입니다.";
+          input.value = "";
+        }
+      });
+    }
+
+    /* ============================================================
+       학생 목록 표시
+       localStorage의 msat.results 구조:
+         { <studentId>: { english: {...}, korean: {...}, math: {...} } }
+       ============================================================ */
+    function readAllLocalStudents() {
+      try {
+        const raw = localStorage.getItem("msat.results");
+        if (!raw) return {};
+        return JSON.parse(raw);
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function showChooser() {
+      showView("chooser-view");
+      const all = readAllLocalStudents();
+      const list = $("#student-list");
+      list.innerHTML = "";
+
+      const entries = Object.entries(all);
+      if (entries.length === 0) {
+        list.innerHTML = '<div class="empty-state">이 기기에 저장된 학생 기록이 없습니다.<br>학생이 이 브라우저에서 시험을 쳤어야 표시됩니다.</div>';
+        return;
+      }
+
+      entries.forEach(([studentId, subjectMap]) => {
+        const firstKey = Object.keys(subjectMap)[0];
+        const first = subjectMap[firstKey] || {};
+        const name = first.studentName || "(이름 없음)";
+        const school = first.school || "";
+        const grade = first.grade || "";
+        const headline = [name, school, grade].filter(Boolean).join(" · ");
+
+        const subjectChips = ["english", "korean", "math"].map(subId => {
+          const done = !!subjectMap[subId];
+          const label = { english: "영어", korean: "국어", math: "수학" }[subId];
+          return `<span class="subject-chip ${done ? 'done' : ''}">${label}${done ? ` · ${subjectMap[subId].totalPoints}점` : " · 미응시"}</span>`;
+        }).join("");
+
+        const entry = document.createElement("div");
+        entry.className = "student-entry";
+        entry.innerHTML = `
+          <div class="student-entry-main">
+            <div class="student-entry-name">${escapeHtml(headline)}</div>
+            <div class="student-entry-id">${studentId}</div>
+            <div class="student-entry-subjects">${subjectChips}</div>
+          </div>
+          <button class="btn btn-primary" data-sid="${studentId}">
+            리포트 생성 →
+          </button>
+        `;
+        entry.querySelector("button").addEventListener("click", () => {
+          generateReport(studentId, subjectMap);
+        });
+        list.appendChild(entry);
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+
+    /* ============================================================
+       통합 리포트 생성
+         1) 로컬 스냅샷으로부터 3과목을 합친 영역 활성도/단어 활성도 계산
+         2) 정규분포 기반 추정으로 상위 % 산출
+         3) Worker의 /?type=brain 호출
+         4) 결과 렌더링 + PDF 옵션
+       ============================================================ */
+    async function generateReport(studentId, subjectMap) {
+      showView("report-view");
+      const root = $("#view-result");
+      root.innerHTML = `
+        <div class="ai-loading" style="padding:60px 20px;">
+          <div class="pulse"></div>
+          <div class="msg">통합 사고력을 계산하고 있습니다…</div>
+          <div class="hint">Aggregating · 약 15초</div>
+        </div>
+      `;
+
+      // 1) 과목 합산 — 각 과목의 regionAbs와 wordIntensity를 평균
+      const available = Object.keys(subjectMap);
+      const first = subjectMap[available[0]];
+      const student = {
+        name: first.studentName,
+        school: first.school,
+        grade: first.grade,
+        studentId,
+      };
+
+      const aggregated = aggregateSubjects(subjectMap, available);
+
+      // 2) Worker 호출
+      const payload = {
+        student,
+        subjects: subjectMap,
+        aggregated,
+        availableSubjects: available,
+      };
+
+      let reportMarkdown = "";
+      let modelUsed = null;
+      try {
+        const url = `${WORKER_URL}?type=brain`;
+        const resp = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) {
+          const errText = await resp.text().catch(() => "");
+          throw new Error(`Worker ${resp.status}: ${errText.slice(0, 200)}`);
+        }
+        const data = await resp.json();
+        reportMarkdown = data.report || "";
+        modelUsed = data.model;
+        if (!reportMarkdown.trim()) throw new Error("Empty report");
+      } catch (err) {
+        root.innerHTML = `
+          <div class="ai-error" style="padding:50px 20px;">
+            <div style="font-size:1.1rem; margin-bottom:8px;">리포트 생성 실패</div>
+            <div style="font-family:var(--mono); font-size:0.78rem; color:var(--ink-4);">${escapeHtml(err.message)}</div>
+            <div style="margin-top:20px;">
+              <button class="btn btn-ghost" onclick="location.reload()">새로고침</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 3) 렌더링
+      renderFullReport(root, student, aggregated, reportMarkdown, modelUsed);
+    }
+
+    /* ============================================================
+       aggregateSubjects — 과목별 스냅샷을 하나로 합침
+       영역 활성도는 가중 평균(과목 수로 평균),
+       상위 % 는 정규분포 CDF 기반 추정.
+       ============================================================ */
+    function aggregateSubjects(subjectMap, availableSubjects) {
+      const regionAbs = {};   // key → 평균 %
+      const wordIntensity = {}; // word → 평균 intensity
+
+      REGION_KEYS.forEach(k => { regionAbs[k] = 0; });
+
+      // 각 과목의 regionAbs를 평균
+      availableSubjects.forEach(subId => {
+        const s = subjectMap[subId];
+        if (!s || !s.regionAbs) return;
+        REGION_KEYS.forEach(k => {
+          regionAbs[k] += (s.regionAbs[k] || 0) / availableSubjects.length;
+        });
+      });
+
+      // 단어별 intensity 평균 (단어가 등장하지 않은 과목에서는 무시)
+      const wordCount = {};
+      availableSubjects.forEach(subId => {
+        const s = subjectMap[subId];
+        if (!s || !s.wordIntensity) return;
+        Object.entries(s.wordIntensity).forEach(([w, inten]) => {
+          if (inten > 0 || wordIntensity[w] !== undefined) {
+            wordIntensity[w] = (wordIntensity[w] || 0) + inten;
+            wordCount[w] = (wordCount[w] || 0) + 1;
+          }
+        });
+      });
+      Object.keys(wordIntensity).forEach(w => {
+        wordIntensity[w] = wordIntensity[w] / wordCount[w];
+      });
+
+      // 영역별 상위 % 추정 (정규분포 가정)
+      // 가정: 활성도가 65% 근처가 중위값(상위 50%)이고, SD=15
+      // 이 가정은 더 많은 데이터가 쌓이면 실제 분포로 대체할 것.
+      const regionPercentile = {};
+      REGION_KEYS.forEach(k => {
+        regionPercentile[k] = percentileOf(regionAbs[k]);
+      });
+
+      // 종합 상위 % = 5개 영역 평균의 percentile
+      const overallAvg = REGION_KEYS.reduce((sum, k) => sum + regionAbs[k], 0) / REGION_KEYS.length;
+      const overallPercentile = percentileOf(overallAvg);
+
+      // 단어 정렬
+      const wordList = Object.entries(wordIntensity)
+        .filter(([w, v]) => v > 0)
+        .map(([w, v]) => ({ word: w, region: REGIONS[WORDS[w]]?.area || "", intensity: v }))
+        .sort((a, b) => b.intensity - a.intensity);
+
+      // 영역별 표준편차 (균형도)
+      const absVals = REGION_KEYS.map(k => regionAbs[k]);
+      const mean = absVals.reduce((a, b) => a + b, 0) / absVals.length;
+      const regionStdev = Math.sqrt(absVals.reduce((a, b) => a + (b - mean) ** 2, 0) / absVals.length);
+
+      return {
+        regionAbs,
+        regionPercentile,
+        overallPercentile,
+        wordIntensity,
+        topWords: wordList.slice(0, 15),
+        bottomWords: wordList.slice(-10),
+        regionStdev,
+      };
+    }
+
+    // 정규분포 가정: mean=65, sd=15. score 높을수록 상위 %가 작아짐.
+    function percentileOf(score) {
+      const mean = 65, sd = 15;
+      const z = (score - mean) / sd;
+      // 간단한 오차함수 근사
+      const p = 1 - normalCdf(z);
+      return Math.max(1, Math.min(99, Math.round(p * 100)));
+    }
+    function normalCdf(z) {
+      // Abramowitz & Stegun 7.1.26 근사
+      const t = 1 / (1 + 0.2316419 * Math.abs(z));
+      const d = 0.3989422804 * Math.exp(-z * z / 2);
+      const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+      return z > 0 ? 1 - prob : prob;
+    }
+
+    /* ============================================================
+       렌더링
+       ============================================================ */
+    function renderFullReport(root, student, aggregated, reportMarkdown, modelUsed) {
+      root.innerHTML = "";
+
+      // 헤더
+      const header = document.createElement("div");
+      header.className = "result-header";
+      header.innerHTML = `
+        <div class="mark">MSAT · Integrated Brain Report</div>
+        <h1><em>${escapeHtml(student.name)}</em> 학생의 사고력 지도</h1>
+        <div class="student">${new Date().toLocaleDateString("ko-KR", { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      `;
+      root.appendChild(header);
+
+      // 종합 상위 %
+      const summary = document.createElement("div");
+      summary.className = "score-summary";
+      summary.innerHTML = `
+        <div class="score-cell">
+          <div class="label">종합 사고력</div>
+          <div><span class="val">상위 ${aggregated.overallPercentile}%</span></div>
+          <div class="cell-note">5개 영역 종합 추정치</div>
+        </div>
+        <div class="score-cell">
+          <div class="label">균형도 (σ)</div>
+          <div><span class="val">${aggregated.regionStdev.toFixed(1)}</span></div>
+          <div class="cell-note">${aggregated.regionStdev < 8 ? "균형형" : "편향형"}</div>
+        </div>
+        <div class="score-cell">
+          <div class="label">최고 영역</div>
+          ${(() => {
+            const top = Object.entries(aggregated.regionAbs).sort((a, b) => b[1] - a[1])[0];
+            const reg = REGIONS[top[0]];
+            return `<div class="val" style="font-size:1.15rem; color:${reg.hex};">${reg.area}</div><div class="cell-note">${Math.round(top[1])}%</div>`;
+          })()}
+        </div>
+        <div class="score-cell">
+          <div class="label">보완 영역</div>
+          ${(() => {
+            const bot = Object.entries(aggregated.regionAbs).sort((a, b) => a[1] - b[1])[0];
+            const reg = REGIONS[bot[0]];
+            return `<div class="val" style="font-size:1.15rem; color:${reg.hex};">${reg.area}</div><div class="cell-note">${Math.round(bot[1])}%</div>`;
+          })()}
+        </div>
+      `;
+      root.appendChild(summary);
+
+      // Section 1: 뇌 영역별 상위 % 바
+      const regionSection = document.createElement("div");
+      regionSection.className = "brain-section";
+      regionSection.innerHTML = `
+        <div class="section-heading">
+          <span class="num">01</span>
+          <h2>뇌 5영역 · 상위 %</h2>
+          <span class="sub">Brain Percentiles</span>
+          <div class="line"></div>
+        </div>
+      `;
+
+      const grid = document.createElement("div");
+      grid.className = "brain-grid";
+
+      const radarWrap = document.createElement("div");
+      radarWrap.className = "radar-wrap";
+      radarWrap.innerHTML = `
+        <div class="radar-title">Radar · 영역 활성도</div>
+        <div class="radar-canvas-wrap"><canvas id="radar-chart"></canvas></div>
+      `;
+      grid.appendChild(radarWrap);
+
+      const regionsList = document.createElement("div");
+      regionsList.className = "regions-list";
+
+      const sortedByAbs = Object.entries(aggregated.regionAbs).sort((a, b) => b[1] - a[1]);
+      sortedByAbs.forEach(([k, abs], idx) => {
+        const reg = REGIONS[k];
+        const pct = Math.round(abs);
+        const percentile = aggregated.regionPercentile[k];
+
+        const card = document.createElement("div");
+        card.className = "region-card";
+        card.style.setProperty("--region-color", reg.color);
+        card.innerHTML = `
+          <div class="top">
+            <div class="name">${reg.kr} <span class="en">${reg.area}</span></div>
+            <div class="pct">상위 ${percentile}%</div>
+          </div>
+          <div class="region-bar-track">
+            <div class="region-bar-fill" style="--region-color:${reg.color}; width:${pct}%;"></div>
+          </div>
+          <div class="region-meta">
+            <span class="region-rel">활성도 ${pct}%</span>
+          </div>
+          <div class="area">${reg.desc}</div>
+        `;
+        regionsList.appendChild(card);
+      });
+      grid.appendChild(regionsList);
+      regionSection.appendChild(grid);
+      root.appendChild(regionSection);
+
+      // AI Report
+      const aiSection = document.createElement("div");
+      aiSection.className = "brain-section";
+      aiSection.innerHTML = `
+        <div class="section-heading">
+          <span class="num">02</span>
+          <h2>AI 통합 리포트</h2>
+          <span class="sub">Thinking Profile & Study Advice</span>
+          <div class="line"></div>
+        </div>
+        <div class="ai-report" id="ai-report"></div>
+      `;
+      root.appendChild(aiSection);
+      $("#ai-report").innerHTML = `<div class="report-content">${miniMarkdown(reportMarkdown)}</div>` +
+        (modelUsed ? `<div style="margin-top:20px; padding-top:14px; border-top:1px dashed var(--line); font-family:var(--mono); font-size:.7rem; color:var(--ink-4); letter-spacing:.08em; text-align:right;">Generated by ${modelUsed}</div>` : "");
+
+      // Actions
+      const actions = document.createElement("div");
+      actions.className = "report-actions";
+      actions.innerHTML = `
+        <button class="btn btn-ghost" id="back-btn">← 학생 목록</button>
+        <button class="btn btn-ghost" id="pdf-btn">📄 PDF 저장</button>
+      `;
+      root.appendChild(actions);
+      $("#back-btn").addEventListener("click", () => showChooser());
+      $("#pdf-btn").addEventListener("click", () => generatePDF(student.name));
+
+      // Draw radar
+      drawRadar(aggregated);
+    }
+
+    function drawRadar(aggregated) {
+      const canvas = document.getElementById("radar-chart");
+      if (!canvas || typeof Chart === "undefined") return;
+      const keys = REGION_KEYS;
+      const labels = keys.map(k => REGIONS[k].area);
+      const data = keys.map(k => Math.round(aggregated.regionAbs[k]));
+
+      if (window._radarChart) window._radarChart.destroy();
+      window._radarChart = new Chart(canvas, {
+        type: "radar",
+        data: {
+          labels,
+          datasets: [{
+            label: "활성도",
+            data,
+            backgroundColor: "rgba(139, 42, 31, 0.12)",
+            borderColor: "rgba(139, 42, 31, 0.85)",
+            borderWidth: 2,
+            pointBackgroundColor: keys.map(k => REGIONS[k].hex),
+            pointBorderColor: "#fff",
+            pointBorderWidth: 2,
+            pointRadius: 5,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            r: {
+              min: 0, max: 100,
+              ticks: { stepSize: 25, font: { family: "'JetBrains Mono', monospace", size: 10 }, color: "#9a8d80", backdropColor: "transparent" },
+              grid: { color: "rgba(107, 93, 82, 0.2)" },
+              angleLines: { color: "rgba(107, 93, 82, 0.25)" },
+              pointLabels: { font: { family: "'Fraunces', serif", size: 13, weight: "500" }, color: "#3d342c" }
+            }
+          },
+          animation: { duration: 700 }
+        }
+      });
+    }
+
+    /* ============ Mini markdown ============ */
+    function miniMarkdown(md) {
+      md = md.replace(/\r\n/g, "\n");
+      md = md.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const blocks = md.split(/\n{2,}/);
+      return blocks.map(block => {
+        block = block.trim();
+        if (!block) return "";
+        if (/^###\s+/.test(block))  return `<h4>${inline(block.replace(/^###\s+/, ""))}</h4>`;
+        if (/^##\s+/.test(block))   return `<h3>${inline(block.replace(/^##\s+/, ""))}</h3>`;
+        if (/^#\s+/.test(block))    return `<h3>${inline(block.replace(/^#\s+/, ""))}</h3>`;
+        if (/^(\-|\*)\s+/m.test(block) && block.split("\n").every(l => /^(\-|\*)\s+|^\s*$/.test(l))) {
+          const items = block.split("\n").filter(l => l.trim()).map(l => `<li>${inline(l.replace(/^(\-|\*)\s+/, ""))}</li>`).join("");
+          return `<ul>${items}</ul>`;
+        }
+        if (/^\d+\.\s+/m.test(block) && block.split("\n").every(l => /^\d+\.\s+|^\s*$/.test(l))) {
+          const items = block.split("\n").filter(l => l.trim()).map(l => `<li>${inline(l.replace(/^\d+\.\s+/, ""))}</li>`).join("");
+          return `<ol>${items}</ol>`;
+        }
+        if (/^&gt;\s+/.test(block)) {
+          return `<p class="intro-para">${inline(block.replace(/^&gt;\s+/, ""))}</p>`;
+        }
+        return `<p>${inline(block.replace(/\n/g, "<br>"))}</p>`;
+      }).join("\n");
+
+      function inline(s) {
+        s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+        s = s.replace(/(^|[^*])\*([^*]+)\*(?!\*)/g, "$1<em>$2</em>");
+        return s;
+      }
+    }
+
+    function generatePDF(name) {
+      if (typeof html2pdf === "undefined") { alert("PDF 라이브러리를 불러오지 못했습니다."); return; }
+      const element = document.getElementById('view-result');
+      const actions = element.querySelector('.report-actions');
+      if (actions) actions.style.display = 'none';
+
+      const opt = {
+        margin: [10, 0, 15, 0],
+        filename: `${name || '학생'}_통합사고력리포트.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0, backgroundColor: '#faf6ef',
+          onclone: (clonedDoc) => {
+            const s = clonedDoc.createElement('style');
+            s.textContent = ['body::before { display:none !important; }', '* { -webkit-text-stroke: 0.3px currentColor; }'].join('\n');
+            clonedDoc.head.appendChild(s);
+          }
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+      html2pdf().set(opt).from(element).save().then(() => {
+        if (actions) actions.style.display = '';
+      });
+    }
+  </script>
+</body>
+</html>
