@@ -3,21 +3,8 @@
  * -------------------------------------------------------------------
  * 하나의 Cloudflare Worker가 모든 과목/리포트 타입을 라우팅한다.
  *
- * 엔드포인트:
- *   GET  /                                      → 헬스체크
- *   POST /?type=subject&subject=english         → 영어 과목별 리포트 + 서술형 채점
- *   POST /?type=subject&subject=korean          → 국어 (미래)
- *   POST /?type=subject&subject=math            → 수학 (미래)
- *   POST /?type=brain                           → 3과목 통합 사고력 리포트 (미래)
- *
- * 프롬프트는 shared/worker/prompts/ 안에서 import.
- * Wrangler가 배포 시 자동으로 하나의 파일로 번들링함.
- *
- * 환경변수:
- *   GEMINI_KEY   — Gemini API 키
- *
- * 모델(자동 폴백):
- *   Primary  : gemini-3-flash
+ * 모델명:
+ *   Primary  : gemini-3-flash-preview
  *   Fallback : gemini-2.5-flash
  * -------------------------------------------------------------------
  */
@@ -28,7 +15,7 @@ import { buildBrainReportPrompt }   from "./prompts/brain-report.js";
 // ============================================================
 // Configuration
 // ============================================================
-const MODEL_PRIMARY  = "gemini-3-flash";
+const MODEL_PRIMARY  = "gemini-3-flash-preview";
 const MODEL_FALLBACK = "gemini-2.5-flash";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -53,13 +40,11 @@ class GeminiError extends Error {
 }
 
 // ============================================================
-// Prompt dispatch (future: korean, math, brain)
+// Prompt dispatch
 // ============================================================
 function buildPromptFor(type, subject, payload) {
   if (type === "subject") {
     if (subject === "english") return buildEnglishSubjectPrompt(payload);
-    // if (subject === "korean") return buildKoreanSubjectPrompt(payload);
-    // if (subject === "math")   return buildMathSubjectPrompt(payload);
     throw new Error(`Unknown or unimplemented subject: ${subject}`);
   }
   if (type === "brain") {
@@ -80,7 +65,6 @@ async function callGemini(model, apiKey, prompt) {
       temperature: 0.8,
       topP: 0.95,
       maxOutputTokens: 3500,
-      responseMimeType: "application/json",
     },
     safetySettings: [
       { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_ONLY_HIGH" },
@@ -118,19 +102,46 @@ async function callGemini(model, apiKey, prompt) {
 }
 
 // ============================================================
-// JSON extraction (robust to stray preambles)
+// Content extraction (Tag-based parsing)
 // ============================================================
-function extractJson(text) {
-  let cleaned = text.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+function extractContent(text) {
+  let jsonData = {};
+  let reportString = "";
+
+  // 1. JSON 블록 추출 (===JSON_START=== ... ===JSON_END===)
+  const jsonMatch = text.match(/===JSON_START===([\s\S]*?)===JSON_END===/);
+  if (jsonMatch) {
+    let cleaned = jsonMatch[1].trim();
+    if (cleaned.startsWith("```")) {
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    }
+    try {
+      jsonData = JSON.parse(cleaned);
+    } catch(err) {
+      // 줄바꿈 정제 후 재시도
+      try {
+        let singleLine = cleaned.replace(/\n/g, " ").replace(/\r/g, "");
+        jsonData = JSON.parse(singleLine);
+      } catch(e) { /* 실패 시 빈 객체 유지 */ }
+    }
   }
-  const firstBrace = cleaned.indexOf("{");
-  const lastBrace  = cleaned.lastIndexOf("}");
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+
+  // 2. Report 블록 추출 (===REPORT_START=== ... ===REPORT_END===)
+  const reportMatch = text.match(/===REPORT_START===([\s\S]*?)(?:===REPORT_END===|$)/);
+  if (reportMatch) {
+    reportString = reportMatch[1].trim();
+  } else {
+    // 대체 추출 로직
+    if (text.includes("===JSON_END===")) {
+      reportString = text.split("===JSON_END===")[1].trim();
+    } else if (jsonData.report) {
+      reportString = jsonData.report;
+    } else {
+      reportString = text.trim();
+    }
   }
-  return JSON.parse(cleaned);
+
+  return { ...jsonData, report: reportString };
 }
 
 function clampScore(v, max = 5) {
@@ -139,7 +150,6 @@ function clampScore(v, max = 5) {
   return Math.max(0, Math.min(max, Math.round(n)));
 }
 
-/** 모델 응답을 표준화. brain 타입은 writingGrades 없음 */
 function validateAndNormalize(parsed, type) {
   const result = {
     report: String(parsed?.report || "").trim(),
@@ -156,7 +166,6 @@ function validateAndNormalize(parsed, type) {
     });
     result.writingGrades = normalizedGrades;
   }
-
   return result;
 }
 
@@ -171,17 +180,10 @@ export default {
 
     const url = new URL(request.url);
 
-    // GET — health check
     if (request.method === "GET") {
       return json({
         service: "MSAT · Gemini Worker",
         models: { primary: MODEL_PRIMARY, fallback: MODEL_FALLBACK },
-        endpoints: [
-          "POST /?type=subject&subject=english",
-          "POST /?type=subject&subject=korean (pending)",
-          "POST /?type=subject&subject=math (pending)",
-          "POST /?type=brain (pending)",
-        ],
         status: "ok",
       }, 200);
     }
@@ -195,11 +197,9 @@ export default {
       return json({ error: "GEMINI_KEY is not configured on the Worker" }, 500);
     }
 
-    // Parse query for routing
     const type = url.searchParams.get("type") || "subject";
     const subject = url.searchParams.get("subject") || "english";
 
-    // Parse body
     let payload;
     try {
       payload = await request.json();
@@ -207,7 +207,6 @@ export default {
       return json({ error: "Invalid JSON body" }, 400);
     }
 
-    // Build prompt
     let prompt;
     try {
       prompt = buildPromptFor(type, subject, payload);
@@ -215,7 +214,6 @@ export default {
       return json({ error: e.message || "Prompt build failed" }, 400);
     }
 
-    // Call Gemini (with fallback)
     let modelUsed = MODEL_PRIMARY;
     let rawText;
     let primaryError = null;
@@ -224,12 +222,10 @@ export default {
       rawText = await callGemini(MODEL_PRIMARY, apiKey, prompt);
     } catch (e) {
       primaryError = e;
-      console.error(`Primary model failed: ${e.message}`);
       try {
         modelUsed = MODEL_FALLBACK;
         rawText = await callGemini(MODEL_FALLBACK, apiKey, prompt);
       } catch (e2) {
-        console.error(`Fallback model also failed: ${e2.message}`);
         return json({
           error: "Both Gemini models failed",
           primary: primaryError?.message || null,
@@ -238,14 +234,12 @@ export default {
       }
     }
 
-    // Parse JSON output
     let parsed;
     try {
-      parsed = extractJson(rawText);
+      parsed = extractContent(rawText);
     } catch (e) {
-      console.error("JSON parse failed:", e.message, "Raw preview:", rawText.slice(0, 500));
       return json({
-        error: "Gemini output was not valid JSON",
+        error: "Gemini output format was invalid",
         detail: e.message,
         rawPreview: rawText.slice(0, 500),
       }, 502);
@@ -270,9 +264,6 @@ export default {
   },
 };
 
-// ============================================================
-// Helpers
-// ============================================================
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,

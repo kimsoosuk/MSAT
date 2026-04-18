@@ -1061,8 +1061,18 @@ export function createApp(config) {
           el("button", {
             class: "btn btn-ghost",
             onclick: () => {
-              const c = $("#ai-report");
-              if (c) c.innerHTML = '<div class="ai-loading"><div class="pulse"></div><div class="msg">재시도 중...</div></div>';
+              const root = $("#view-result");
+              if (root) {
+                root.innerHTML = `
+                  <div class="result-body" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; text-align:center;">
+                    <div class="ai-loading" style="margin-top:0;">
+                      <div class="pulse"></div>
+                      <div style="font-family: var(--serif); font-size: 1.5rem; margin-bottom: 8px; color: var(--ink);">채점 및 분석 재시도 중...</div>
+                      <div class="hint" style="color: var(--ink-3);">서술형 문항 채점과 AI 분석을 다시 시도하고 있습니다.</div>
+                    </div>
+                  </div>
+                `;
+              }
               fetchAIReport();
             }
           }, "다시 시도")
