@@ -1808,11 +1808,11 @@
   margin: 4px auto;
 }
 
-/* Section detail grid */
+/* Section detail grid — 데스크톱에서 가로 풀폭 스택 */
 .section-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .section-detail-card {

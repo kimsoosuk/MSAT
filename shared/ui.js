@@ -521,7 +521,7 @@ export function createApp(config) {
     body.append(
       el("div", { class: "result-header" },
         el("div", { class: "mark" }, `MSAT ${SUBJECT_META.en} · Score Report`),
-        el("h1", { html: `<em>${escapeHtml(state.studentName)}</em> 학생의 ${SUBJECT_META.kr} 성적표` }),
+        el("h1", { html: `<em>${escapeHtml(state.studentName)}</em> 학생의 ${SUBJECT_META.kr} 능력 진단 레포트`, style: "font-size: 1.6rem;" }),
         el("div", { class: "student" }, new Date().toLocaleDateString("ko-KR", { year: 'numeric', month: 'long', day: 'numeric' }))
       )
     );
@@ -1247,7 +1247,7 @@ export function createApp(config) {
         pdf.setPage(i);
         pdf.setFontSize(8);
         pdf.setTextColor(154, 141, 128);
-        pdf.text('\u00A9\uC9C0\uD61C\uC758\uC0B0\uC2E4', pageWidth / 2, pageHeight - 8, { align: 'center' });
+        pdf.text('(C) jihyeui sansil', pageWidth / 2, pageHeight - 8, { align: 'center' });
       }
     }).save().then(() => {
       if (actions) actions.style.display = '';
