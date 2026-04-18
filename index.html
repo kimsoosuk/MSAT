@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#1a1612" />
+  <title>MSAT · 중학수학능력진단</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300..700&family=Noto+Serif+KR:wght@400..700&family=Noto+Sans+KR:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="./shared/styles.css">
+
+  <style>
+    /* ============= Landing page specific ============= */
+    .landing {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    .landing-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .landing-eyebrow {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 18px;
+    }
+    .landing-title {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 144;
+      font-weight: 300;
+      font-size: clamp(3.4rem, 10vw, 5.2rem);
+      font-style: italic;
+      color: var(--ink);
+      line-height: 1;
+      letter-spacing: -0.02em;
+      margin: 0 0 14px;
+    }
+    .landing-sub {
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      color: var(--ink-2);
+      letter-spacing: 0.02em;
+    }
+    .landing-rule {
+      width: 48px;
+      height: 1px;
+      background: var(--ink-3);
+      margin: 24px auto;
+    }
+    .landing-intro {
+      max-width: 540px;
+      margin: 0 auto;
+      font-family: var(--serif);
+      font-size: 1rem;
+      color: var(--ink-2);
+      line-height: 1.7;
+    }
+
+    /* Step cards */
+    .landing-steps {
+      display: grid;
+      gap: 32px;
+    }
+    .landing-step {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 32px 30px;
+      box-shadow: var(--shadow-sm);
+    }
+    .step-num {
+      font-family: var(--serif);
+      font-style: italic;
+      color: var(--accent);
+      font-size: 1.3rem;
+      font-weight: 400;
+    }
+    .step-title {
+      font-family: var(--serif);
+      font-size: 1.35rem;
+      font-weight: 500;
+      color: var(--ink);
+      margin: 6px 0 4px;
+      letter-spacing: -0.01em;
+    }
+    .step-sub {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 0.9rem;
+      color: var(--ink-3);
+      margin-bottom: 22px;
+    }
+
+    /* Student form */
+    .student-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 20px;
+    }
+    .student-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .student-field.full { grid-column: 1 / -1; }
+    .student-field-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .student-field-input {
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      color: var(--ink);
+      padding: 8px 2px;
+      border: none;
+      border-bottom: 1.5px solid var(--line-2);
+      background: transparent;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .student-field-input:focus {
+      border-bottom-color: var(--accent);
+      border-bottom-width: 2px;
+      padding-bottom: 7px;
+    }
+    .student-field-hint {
+      font-family: var(--sans);
+      font-size: 0.78rem;
+      color: var(--ink-4);
+    }
+
+    .save-student {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 22px;
+      gap: 10px;
+      align-items: center;
+    }
+    .save-confirm {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--success);
+      letter-spacing: 0.04em;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .save-confirm.show { opacity: 1; }
+
+    /* Subject cards */
+    .subject-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 6px;
+    }
+    .subject-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 24px 22px;
+      min-height: 180px;
+      text-decoration: none;
+      color: var(--ink);
+      transition: all .2s;
+      overflow: hidden;
+    }
+    .subject-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity .3s;
+      pointer-events: none;
+    }
+    .subject-card[data-subject="english"]::before {
+      background: linear-gradient(135deg, rgba(59,110,163,0.08), transparent);
+    }
+    .subject-card[data-subject="korean"]::before {
+      background: linear-gradient(135deg, rgba(196,69,107,0.08), transparent);
+    }
+    .subject-card[data-subject="math"]::before {
+      background: linear-gradient(135deg, rgba(94,122,62,0.08), transparent);
+    }
+    .subject-card:not(.disabled):hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--line-2);
+    }
+    .subject-card:not(.disabled):hover::before { opacity: 1; }
+    .subject-card.disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+    .subject-card-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .subject-card-title {
+      font-family: var(--serif);
+      font-variation-settings: "opsz" 144;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 2rem;
+      color: var(--ink);
+      line-height: 1.1;
+      margin: 8px 0 6px;
+      letter-spacing: -0.01em;
+    }
+    .subject-card-kr {
+      font-family: var(--serif);
+      font-size: 1rem;
+      color: var(--ink-2);
+    }
+    .subject-card-meta {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--ink-3);
+      letter-spacing: 0.04em;
+      margin-top: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .subject-card-arrow {
+      font-size: 1rem;
+      transition: transform .2s;
+    }
+    .subject-card:not(.disabled):hover .subject-card-arrow {
+      transform: translateX(4px);
+    }
+    .subject-card-status {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 3px;
+    }
+    .subject-card-status.completed {
+      background: var(--success);
+      color: var(--paper);
+    }
+    .subject-card-status.pending {
+      background: var(--line-2);
+      color: var(--ink-2);
+    }
+
+    /* Disabled step when student info not yet saved */
+    .step-locked {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    .step-locked-msg {
+      font-family: var(--serif);
+      font-style: italic;
+      color: var(--ink-3);
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    /* Footer */
+    .landing-foot {
+      text-align: center;
+      margin-top: 48px;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--ink-4);
+      letter-spacing: 0.14em;
+    }
+    .landing-foot a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px dotted var(--ink-4);
+    }
+
+    @media (max-width: 560px) {
+      .landing { padding: 36px 20px 60px; }
+      .student-form { grid-template-columns: 1fr; }
+      .landing-step { padding: 24px 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="landing">
+
+      <!-- Header -->
+      <header class="landing-header">
+        <div class="landing-eyebrow">Middle school Scholastic Ability Test</div>
+        <h1 class="landing-title">MSAT</h1>
+        <div class="landing-sub">중학수학능력진단</div>
+        <div class="landing-rule"></div>
+        <p class="landing-intro">
+          예비 중학생을 위한 사고력 기반 진단 시험입니다.<br>
+          국어 · 영어 · 수학 세 과목을 순서대로 풀고, 각 과목별 성적 리포트를 받아보세요.
+        </p>
+      </header>
+
+      <div class="landing-steps">
+
+        <!-- Step 1 — Student Info -->
+        <section class="landing-step">
+          <div class="step-num">01</div>
+          <h2 class="step-title">학생 정보</h2>
+          <div class="step-sub">시험 결과를 한 명의 학생 기록으로 연결하기 위해 필요합니다.</div>
+
+          <form class="student-form" id="student-form" onsubmit="return false;">
+            <div class="student-field">
+              <label class="student-field-label" for="f-school">학교</label>
+              <input type="text" id="f-school" class="student-field-input" autocomplete="off" />
+            </div>
+            <div class="student-field">
+              <label class="student-field-label" for="f-grade">학년</label>
+              <input type="text" id="f-grade" class="student-field-input" autocomplete="off" placeholder="예) 6학년" />
+            </div>
+            <div class="student-field">
+              <label class="student-field-label" for="f-name">이름</label>
+              <input type="text" id="f-name" class="student-field-input" autocomplete="off" />
+            </div>
+            <div class="student-field">
+              <label class="student-field-label" for="f-dob">생년월일 (6자리)</label>
+              <input type="text" id="f-dob" class="student-field-input" autocomplete="off" placeholder="예) 120415" inputmode="numeric" maxlength="6" />
+              <span class="student-field-hint">같은 학생의 다른 과목 결과를 묶는 식별 키로만 쓰입니다.</span>
+            </div>
+          </form>
+
+          <div class="save-student">
+            <span class="save-confirm" id="save-confirm">✓ 저장됨</span>
+            <button class="btn btn-primary" id="save-btn" disabled>
+              <span>학생 정보 저장</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Step 2 — Subject selection -->
+        <section class="landing-step" id="subject-step">
+          <div class="step-num">02</div>
+          <h2 class="step-title">시험 시작</h2>
+          <div class="step-sub">과목을 선택해 시험을 시작하세요. 언제든 돌아와서 다른 과목을 풀 수 있습니다.</div>
+
+          <div id="subject-area">
+            <div class="step-locked-msg">
+              먼저 학생 정보를 저장하세요.
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="landing-foot">
+        <a href="#" id="reset-link">학생 정보 초기화</a>
+      </div>
+
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      makeStudentId, saveSession, loadSession, clearSession, loadAllResults,
+    } from "./shared/data.js";
+
+    const $ = s => document.querySelector(s);
+
+    const fSchool = $("#f-school");
+    const fGrade  = $("#f-grade");
+    const fName   = $("#f-name");
+    const fDob    = $("#f-dob");
+    const saveBtn = $("#save-btn");
+    const saveConfirm = $("#save-confirm");
+    const subjectArea = $("#subject-area");
+
+    // 기존 세션 복원
+    const existing = loadSession();
+    if (existing) {
+      fSchool.value = existing.school || "";
+      fGrade.value  = existing.grade  || "";
+      fName.value   = existing.studentName || "";
+      fDob.value    = existing.dob || "";
+      renderSubjects(existing.studentId);
+    }
+
+    // 필수 입력 체크: 이름 + 생년월일 6자리는 필수. 학교/학년은 선택(추천).
+    function canSave() {
+      const name = fName.value.trim();
+      const dob = fDob.value.trim();
+      return name.length > 0 && /^\d{6}$/.test(dob);
+    }
+
+    [fName, fSchool, fGrade, fDob].forEach(inp => {
+      inp.addEventListener("input", () => {
+        saveBtn.disabled = !canSave();
+      });
+    });
+
+    saveBtn.addEventListener("click", async () => {
+      if (!canSave()) return;
+      const info = {
+        studentName: fName.value.trim(),
+        school: fSchool.value.trim(),
+        grade: fGrade.value.trim(),
+        dob: fDob.value.trim(),
+      };
+      info.studentId = await makeStudentId({
+        school: info.school,
+        grade:  info.grade,
+        name:   info.studentName,
+        dob6:   info.dob,
+      });
+      saveSession(info);
+      showSaveConfirm();
+      renderSubjects(info.studentId);
+    });
+
+    function showSaveConfirm() {
+      saveConfirm.classList.add("show");
+      setTimeout(() => saveConfirm.classList.remove("show"), 2000);
+    }
+
+    function renderSubjects(studentId) {
+      // 이미 푼 과목 조회
+      const results = loadAllResults(studentId);
+
+      const subjects = [
+        { id: "english", label: "English",  kr: "영어", time: "70 min", available: true  },
+        { id: "korean",  label: "Korean",   kr: "국어", time: "TBD",    available: false },
+        { id: "math",    label: "Math",     kr: "수학", time: "TBD",    available: false },
+      ];
+
+      subjectArea.innerHTML = "";
+      const grid = document.createElement("div");
+      grid.className = "subject-cards";
+
+      subjects.forEach(s => {
+        const done = !!results[s.id];
+        const disabled = !s.available;
+
+        const card = document.createElement(disabled ? "div" : "a");
+        if (!disabled) card.href = `./${s.id}/`;
+        card.className = "subject-card" + (disabled ? " disabled" : "");
+        card.dataset.subject = s.id;
+
+        const statusBadge = done
+          ? `<div class="subject-card-status completed">완료</div>`
+          : disabled
+            ? `<div class="subject-card-status pending">준비중</div>`
+            : "";
+
+        card.innerHTML = `
+          ${statusBadge}
+          <div>
+            <div class="subject-card-label">Subject</div>
+            <div class="subject-card-title">${s.label}</div>
+            <div class="subject-card-kr">${s.kr}</div>
+          </div>
+          <div class="subject-card-meta">
+            <span>30문항 · ${s.time}</span>
+            ${!disabled ? `<span class="subject-card-arrow">→</span>` : ""}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      subjectArea.innerHTML = "";
+      subjectArea.appendChild(grid);
+    }
+
+    // 학생 정보 초기화
+    $("#reset-link").addEventListener("click", (e) => {
+      e.preventDefault();
+      if (!confirm("저장된 학생 정보를 지우고 초기화할까요? (이미 푼 시험 결과는 유지됩니다)")) return;
+      clearSession();
+      fSchool.value = fGrade.value = fName.value = fDob.value = "";
+      saveBtn.disabled = true;
+      subjectArea.innerHTML = '<div class="step-locked-msg">먼저 학생 정보를 저장하세요.</div>';
+    });
+  </script>
+</body>
+</html>
