@@ -57,13 +57,55 @@ export const PASSAGE_2 = {
 // 섹션
 // ============================================================
 export const SECTIONS = [
-  { id: "A", en: "Reading Comprehension", desc: "Read each passage carefully and answer the questions that follow." },
-  { id: "B", en: "Quantitative Reasoning", desc: "Read each question carefully and select the best answer." },
-  { id: "C", en: "Sentence Completion", desc: "Select the phrase that best completes the sentence." },
-  { id: "D", en: "Sentence Ordering", desc: "Arrange sentences in the most logical order." },
-  { id: "E", en: "Mood and Tone", desc: "Answer questions about the speaker's feelings or mood." },
-  { id: "F", en: "Inference", desc: "Choose the best answer based strictly on what can be inferred." },
-  { id: "G", en: "Short Writing", desc: "Answer in complete sentences. Write in English." },
+  {
+    id: "A", en: "Reading Comprehension", kr: "독해력",
+    desc: "Read each passage carefully and answer the questions that follow.",
+    abilities: "글의 목적·요지 파악, 세부 정보 추출, 문맥 속 어휘 추론, 핵심 주제 도출, 근거 기반 추론",
+    lowGuide: "지문을 꼼꼼히 다시 읽으며 핵심 문장에 밑줄 치는 연습이 도움이 됩니다. 문단별 중심 내용을 한 줄로 정리하는 습관을 들여보세요.",
+    highGuide: "독해의 기본기가 탄탄합니다. 더 긴 지문이나 다양한 장르(에세이, 기사 등)에 도전하면 실력이 한층 성장합니다.",
+  },
+  {
+    id: "B", en: "Quantitative Reasoning", kr: "수리적 사고",
+    desc: "Read each question carefully and select the best answer.",
+    abilities: "비례·비율 문제, 도표·그래프 해석, 속력·거리 계산, 규칙·수열 찾기, 도형 넓이 계산",
+    lowGuide: "문제 속 숫자 관계를 그림이나 표로 정리하면 풀이가 쉬워집니다. 기본 연산과 비율 개념을 복습해보세요.",
+    highGuide: "수리적 사고가 우수합니다. 복합 조건이 붙는 심화 문제에 도전해 보면 좋겠습니다.",
+  },
+  {
+    id: "C", en: "Sentence Completion", kr: "문장 완성",
+    desc: "Select the phrase that best completes the sentence.",
+    abilities: "원인·결과의 논리적 연결, 목표·행동의 자연스러운 귀결, 조건·조치의 타당성, 진단·대응 행동의 적절성",
+    lowGuide: "문장 앞뒤 맥락을 파악하고, '왜?', '그래서?'를 자문하며 논리적 연결고리를 찾는 연습이 필요합니다.",
+    highGuide: "문맥 파악력이 좋습니다. 접속사와 논리 연결어를 더 다양하게 활용하는 영작 연습을 해보세요.",
+  },
+  {
+    id: "D", en: "Sentence Ordering", kr: "문장 배열",
+    desc: "Arrange sentences in the most logical order.",
+    abilities: "시간순 배열, 원인-결과 흐름 파악, 첫 문장/마지막 문장 고정 배열, 완전 재구성",
+    lowGuide: "각 문장의 접속사(However, Later, As a result 등)에 주목하면 순서를 잡는 실마리가 됩니다.",
+    highGuide: "글의 흐름을 잘 파악하고 있습니다. 더 복잡한 논설문 구조에도 도전해보세요.",
+  },
+  {
+    id: "E", en: "Mood and Tone", kr: "분위기·감정 파악",
+    desc: "Answer questions about the speaker's feelings or mood.",
+    abilities: "인물 감정 식별, 상황의 전반적 분위기 파악, 감정 변화 서사 추적",
+    lowGuide: "인물의 행동과 표현에서 감정 단서를 찾는 연습이 필요합니다. 영어 감정 어휘(frustrated, grateful 등)를 늘려보세요.",
+    highGuide: "감정 표현을 잘 읽어냅니다. 문학 작품을 읽으며 미묘한 심리 변화를 포착하는 훈련을 이어가세요.",
+  },
+  {
+    id: "F", en: "Inference", kr: "추론",
+    desc: "Choose the best answer based strictly on what can be inferred.",
+    abilities: "근거 기반 추론, 과잉 추론(NOT) 판별, 원인·동기 추론",
+    lowGuide: "추론은 '글에 쓰인 근거'에서만 출발해야 합니다. 선택지마다 '이 내용이 글에 있는가?'를 확인하는 습관을 들이세요.",
+    highGuide: "추론 능력이 뛰어납니다. 다양한 비문학 지문에서 필자의 숨은 의도를 읽어내는 연습을 해보세요.",
+  },
+  {
+    id: "G", en: "Short Writing", kr: "서술형 영작",
+    desc: "Answer in complete sentences. Write in English.",
+    abilities: "비교·대조 서술, 정의·예시 기반 서술, 완전한 영어 문장 작성, 기준의 일관성",
+    lowGuide: "짧은 문장이라도 주어+동사를 갖춘 완전한 문장을 쓰는 연습부터 시작하세요. 하루 3문장 영작이 효과적입니다.",
+    highGuide: "영작 표현력이 우수합니다. 다양한 문장 구조와 접속사를 활용해 글의 깊이를 더해보세요.",
+  },
 ];
 
 // ============================================================

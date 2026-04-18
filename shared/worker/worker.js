@@ -10,12 +10,12 @@
  */
 
 import { buildEnglishSubjectPrompt } from "./prompts/subject-english.js";
-import { buildBrainReportPrompt }   from "./prompts/brain-report.js";
+import { buildBrainReportPrompt } from "./prompts/brain-report.js";
 
 // ============================================================
 // Configuration
 // ============================================================
-const MODEL_PRIMARY  = "gemini-3-flash-preview";
+const MODEL_PRIMARY = "gemini-3-flash-preview";
 const MODEL_FALLBACK = "gemini-2.5-flash";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -67,8 +67,8 @@ async function callGemini(model, apiKey, prompt) {
       maxOutputTokens: 3500,
     },
     safetySettings: [
-      { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_ONLY_HIGH" },
-      { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_ONLY_HIGH" },
+      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
       { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
       { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
     ],
@@ -107,6 +107,7 @@ async function callGemini(model, apiKey, prompt) {
 function extractContent(text) {
   let jsonData = {};
   let reportString = "";
+  let sectionNotes = {};
 
   // 1. JSON 블록 추출 (===JSON_START=== ... ===JSON_END===)
   const jsonMatch = text.match(/===JSON_START===([\s\S]*?)===JSON_END===/);
@@ -117,16 +118,28 @@ function extractContent(text) {
     }
     try {
       jsonData = JSON.parse(cleaned);
-    } catch(err) {
+    } catch (err) {
       // 줄바꿈 정제 후 재시도
       try {
         let singleLine = cleaned.replace(/\n/g, " ").replace(/\r/g, "");
         jsonData = JSON.parse(singleLine);
-      } catch(e) { /* 실패 시 빈 객체 유지 */ }
+      } catch (e) { /* 실패 시 빈 객체 유지 */ }
     }
   }
 
-  // 2. Report 블록 추출 (===REPORT_START=== ... ===REPORT_END===)
+  // 2. Section Detail 블록 추출 (===SECTION_DETAIL_START=== ... ===SECTION_DETAIL_END===)
+  const sectionMatch = text.match(/===SECTION_DETAIL_START===([\s\S]*?)===SECTION_DETAIL_END===/);
+  if (sectionMatch) {
+    const sectionText = sectionMatch[1].trim();
+    // [SECTION_A] ... [SECTION_B] ... 형식 파싱
+    const sectionRegex = /\[SECTION_([A-G])\]([\s\S]*?)(?=\[SECTION_[A-G]\]|$)/g;
+    let m;
+    while ((m = sectionRegex.exec(sectionText)) !== null) {
+      sectionNotes[m[1]] = m[2].trim();
+    }
+  }
+
+  // 3. Report 블록 추출 (===REPORT_START=== ... ===REPORT_END===)
   const reportMatch = text.match(/===REPORT_START===([\s\S]*?)(?:===REPORT_END===|$)/);
   if (reportMatch) {
     reportString = reportMatch[1].trim();
@@ -134,6 +147,8 @@ function extractContent(text) {
     // 대체 추출 로직
     if (text.includes("===JSON_END===")) {
       reportString = text.split("===JSON_END===")[1].trim();
+      // SECTION_DETAIL 블록 제거
+      reportString = reportString.replace(/===SECTION_DETAIL_START===([\s\S]*?)===SECTION_DETAIL_END===/, "").trim();
     } else if (jsonData.report) {
       reportString = jsonData.report;
     } else {
@@ -141,7 +156,7 @@ function extractContent(text) {
     }
   }
 
-  return { ...jsonData, report: reportString };
+  return { ...jsonData, report: reportString, sectionNotes };
 }
 
 function clampScore(v, max = 5) {
@@ -153,6 +168,7 @@ function clampScore(v, max = 5) {
 function validateAndNormalize(parsed, type) {
   const result = {
     report: String(parsed?.report || "").trim(),
+    sectionNotes: parsed?.sectionNotes || {},
   };
 
   if (type === "subject") {
@@ -258,6 +274,9 @@ export default {
     };
     if (normalized.writingGrades) {
       responseBody.writingGrades = normalized.writingGrades;
+    }
+    if (normalized.sectionNotes && Object.keys(normalized.sectionNotes).length > 0) {
+      responseBody.sectionNotes = normalized.sectionNotes;
     }
 
     return json(responseBody, 200);

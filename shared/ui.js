@@ -558,11 +558,11 @@ export function createApp(config) {
     body.append(perQBlock);
     renderPerQuestionTable(perQTable);
 
-    // === Section 3: AI 리포트 ===
+    // === Section 3: 영어 레포트 ===
     const reportSection = el("div", { class: "brain-section" },
       el("div", { class: "section-heading" },
         el("span", { class: "num" }, "03"),
-        el("h2", {}, `AI ${SUBJECT_META.kr} 리포트`),
+        el("h2", {}, `${SUBJECT_META.kr} 레포트`),
         el("span", { class: "sub" }, "Personalized Feedback"),
         el("div", { class: "line" })
       ),
@@ -584,6 +584,11 @@ export function createApp(config) {
       )
     );
 
+    // Footer
+    body.append(
+      el("div", { class: "global-footer" }, "©지혜의산실")
+    );
+
     root.append(body);
   }
 
@@ -603,14 +608,13 @@ export function createApp(config) {
         : el("div", { class: "cell-note" }, "100점 만점")
     );
 
-    // 등급 — 가장 크게 표시
+    // 등급 — 가장 크게 표시 (desc 텍스트는 제거)
     const gradeCell = el("div", { class: "score-cell score-cell--grade" },
       el("div", { class: "label" }, "등급"),
       el("div", {
         class: "grade-badge",
         style: pending ? "" : `color: ${r.grade.color}; border-color: ${r.grade.color};`
-      }, pending ? "—" : r.grade.label),
-      el("div", { class: "cell-note" }, pending ? "채점 대기" : r.grade.desc)
+      }, pending ? "—" : r.grade.label)
     );
 
     const mcCell = el("div", { class: "score-cell" },
@@ -635,7 +639,7 @@ export function createApp(config) {
   }
 
   // 섹션별 상세 진단 — 과목별 리포트의 메인 콘텐츠
-  function renderSectionDetail(container) {
+  function renderSectionDetail(container, aiSectionNotes) {
     const r = state.result;
     container.innerHTML = "";
 
@@ -646,6 +650,7 @@ export function createApp(config) {
     Object.values(r.perSection).forEach(s => {
       const meta = sectionMeta[s.section];
       const enName = meta?.en || s.section;
+      const krName = meta?.kr || "";
 
       // 레벨 (bar 시각화용)
       const pct = s.pct;
@@ -654,12 +659,15 @@ export function createApp(config) {
       else if (pct >= 60) levelClass = "level-mid";
       else levelClass = "level-low";
 
+      // 능력 설명 + 점수 기반 가이드
+      const guide = pct >= 70 ? (meta?.highGuide || "") : (meta?.lowGuide || "");
+
       const card = el("div", { class: `section-detail-card ${levelClass}` },
         el("div", { class: "section-detail-head" },
           el("div", { class: "section-detail-id" }, `Section ${s.section}`),
           el("div", { class: "section-detail-pct" }, `${pct}%`)
         ),
-        el("div", { class: "section-detail-name" }, enName),
+        el("div", { class: "section-detail-name" }, `${enName}${krName ? " · " + krName : ""}`),
         el("div", { class: "section-detail-bar" },
           el("div", { class: "section-detail-bar-fill", style: `width: ${pct}%;` })
         ),
@@ -669,6 +677,27 @@ export function createApp(config) {
           el("span", {}, `${s.pointsEarned}/${s.pointsMax}점`)
         )
       );
+
+      // 요구 능력
+      if (meta?.abilities) {
+        card.append(el("div", { class: "section-detail-abilities" },
+          el("span", { class: "section-detail-abilities-label" }, "요구 능력"),
+          el("span", {}, meta.abilities)
+        ));
+      }
+
+      // 점수 기반 가이드
+      if (guide) {
+        card.append(el("div", { class: "section-detail-guide" }, guide));
+      }
+
+      // AI가 생성한 섹션별 성취도 노트 (있으면 주입)
+      if (aiSectionNotes && aiSectionNotes[s.section]) {
+        const noteDiv = el("div", { class: "section-detail-ai-note" });
+        noteDiv.innerHTML = miniMarkdown(aiSectionNotes[s.section]);
+        card.append(noteDiv);
+      }
+
       container.append(card);
     });
   }
@@ -1041,8 +1070,9 @@ export function createApp(config) {
       // Re-render result top (score summary, regions, words, radar)
       renderResult();
 
-      // Render AI report
-      renderAIReport(reportMarkdown, data.model);
+      // Render AI report — sectionNotes가 있으면 01 섹션 카드에 주입
+      const sectionNotes = data.sectionNotes || null;
+      renderAIReport(reportMarkdown, data.model, sectionNotes);
     } catch (err) {
       console.error("AI report error:", err);
       renderAIError(err);
@@ -1088,14 +1118,32 @@ export function createApp(config) {
     md = md.replace(/\r\n/g, "\n");
     md = md.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+    // 줄 단위로 처리: 각 줄에서 # 기호 제거 후 블록 분할
+    const lines = md.split("\n");
+    const processed = [];
+    for (const line of lines) {
+      if (/^####\s+/.test(line)) {
+        processed.push(`\n\n__H5__${line.replace(/^####\s+/, "")}__H5END__\n\n`);
+      } else if (/^###\s+/.test(line)) {
+        processed.push(`\n\n__H4__${line.replace(/^###\s+/, "")}__H4END__\n\n`);
+      } else if (/^##\s+/.test(line)) {
+        processed.push(`\n\n__H3__${line.replace(/^##\s+/, "")}__H3END__\n\n`);
+      } else if (/^#\s+/.test(line)) {
+        processed.push(`\n\n__H3__${line.replace(/^#\s+/, "")}__H3END__\n\n`);
+      } else {
+        processed.push(line);
+      }
+    }
+    md = processed.join("\n");
+
     const blocks = md.split(/\n{2,}/);
     return blocks.map(block => {
       block = block.trim();
       if (!block) return "";
 
-      if (/^###\s+/.test(block))  return `<h4>${inline(block.replace(/^###\s+/, ""))}</h4>`;
-      if (/^##\s+/.test(block))   return `<h3>${inline(block.replace(/^##\s+/, ""))}</h3>`;
-      if (/^#\s+/.test(block))    return `<h3>${inline(block.replace(/^#\s+/, ""))}</h3>`;
+      if (block.startsWith("__H3__")) return `<h3>${inline(block.replace(/__H3__|__H3END__/g, ""))}</h3>`;
+      if (block.startsWith("__H4__")) return `<h4>${inline(block.replace(/__H4__|__H4END__/g, ""))}</h4>`;
+      if (block.startsWith("__H5__")) return `<h5>${inline(block.replace(/__H5__|__H5END__/g, ""))}</h5>`;
 
       if (/^(\-|\*)\s+/m.test(block) && block.split("\n").every(l => /^(\-|\*)\s+|^\s*$/.test(l))) {
         const items = block.split("\n").filter(l => l.trim())
@@ -1123,21 +1171,20 @@ export function createApp(config) {
     }
   }
 
-  function renderAIReport(markdown, modelUsed) {
+  function renderAIReport(markdown, modelUsed, sectionNotes) {
+    if (sectionNotes) {
+      const sectionDetailGrid = $("#section-detail-grid");
+      if (sectionDetailGrid) {
+        renderSectionDetail(sectionDetailGrid, sectionNotes);
+      }
+    }
+
     const container = $("#ai-report");
     if (!container) return;
     container.innerHTML = "";
     const content = el("div", { class: "report-content" });
     content.innerHTML = miniMarkdown(markdown);
     container.append(content);
-
-    if (modelUsed) {
-      container.append(
-        el("div", {
-          style: "margin-top:20px; padding-top:14px; border-top:1px dashed var(--line); font-family:var(--mono); font-size:.7rem; color:var(--ink-4); letter-spacing:.08em; text-align:right;"
-        }, `Generated by ${modelUsed}`)
-      );
-    }
   }
 
   // ==========================================================
@@ -1152,9 +1199,11 @@ export function createApp(config) {
     const actions = element.querySelector('.report-actions');
     if (actions) actions.style.display = 'none';
 
+    document.body.classList.add('pdf-capture');
+
     const opt = {
-      margin: [10, 0, 15, 0],
-      filename: `${state.studentName || '학생'}_${SUBJECT_META.kr}_리포트.pdf`,
+      margin: [10, 8, 18, 8],
+      filename: `${state.studentName || '학생'}_${SUBJECT_META.kr}_레포트.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: {
         scale: 2,
@@ -1166,17 +1215,43 @@ export function createApp(config) {
           s.textContent = [
             'body::before { display:none !important; }',
             '#view-result, .app { opacity:1 !important; animation:none !important; }',
-            '* { -webkit-text-stroke: 0.3px currentColor; }'
+            '* { -webkit-text-stroke: 0.2px currentColor; }',
+            '.result-body { background: transparent; }',
+            '.score-summary { border: 1px solid #d9cfbe; border-radius: 8px; overflow: hidden; }',
+            '.score-cell { background: #fdfbf6; }',
+            '.section-detail-card { background: #fdfbf6; border: 1px solid #d9cfbe; }',
+            '.section-detail-guide { background: #f2ecdf; }',
+            '.section-detail-ai-note { background: rgba(139, 42, 31, 0.03); }',
+            '.per-q-cell { background: #fdfbf6; }',
+            '.report-content { page-break-inside: auto; }',
+            '.report-content h3 { page-break-after: avoid; }',
+            '.report-content h4 { page-break-after: avoid; }',
+            '.brain-section { page-break-inside: auto; }',
+            '.global-footer { display: block !important; text-align: center; font-size: 0.72rem; color: #9a8d80; padding: 16px 0 8px; margin-top: 24px; }',
           ].join('\n');
           clonedDoc.head.appendChild(s);
+
+          const clonedActions = clonedDoc.querySelector('.report-actions');
+          if (clonedActions) clonedActions.style.display = 'none';
         }
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    html2pdf().set(opt).from(element).save().then(() => {
+    html2pdf().set(opt).from(element).toPdf().get('pdf').then(function(pdf) {
+      const totalPages = pdf.internal.getNumberOfPages();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(154, 141, 128);
+        pdf.text('\u00A9\uC9C0\uD61C\uC758\uC0B0\uC2E4', pageWidth / 2, pageHeight - 8, { align: 'center' });
+      }
+    }).save().then(() => {
       if (actions) actions.style.display = '';
+      document.body.classList.remove('pdf-capture');
     });
   }
 

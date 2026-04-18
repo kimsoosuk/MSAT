@@ -1979,3 +1979,106 @@
     gap: 6px;
   }
 }
+
+/* ==========================================================================
+ * Section Detail — 능력 설명, 가이드, AI 노트
+ * ========================================================================== */
+
+.section-detail-abilities {
+  margin-top: 10px;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--ink-3);
+  line-height: 1.55;
+}
+
+.section-detail-abilities-label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-right: 8px;
+}
+
+.section-detail-guide {
+  margin-top: 10px;
+  font-family: var(--serif);
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  line-height: 1.65;
+  font-style: italic;
+  padding: 10px 12px;
+  background: var(--bg-2);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--gold);
+}
+
+.section-detail-ai-note {
+  margin-top: 12px;
+  font-family: var(--serif);
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  line-height: 1.7;
+  padding: 12px 14px;
+  background: rgba(139, 42, 31, 0.03);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--accent);
+}
+
+.section-detail-ai-note p {
+  margin: 0 0 8px;
+}
+
+.section-detail-ai-note p:last-child {
+  margin-bottom: 0;
+}
+
+/* Section detail card — expanded layout for more content */
+.section-detail-card {
+  page-break-inside: avoid;
+}
+
+/* ==========================================================================
+ * Report content — 간격 개선 (문단이 잘 구분되도록)
+ * ========================================================================== */
+
+.report-content h3 {
+  margin-top: 40px;
+  padding-top: 28px;
+}
+
+.report-content h4 {
+  margin-top: 28px;
+  margin-bottom: 12px;
+}
+
+.report-content h5 {
+  margin-top: 24px;
+  margin-bottom: 10px;
+}
+
+.report-content p {
+  margin-bottom: 16px;
+}
+
+/* ==========================================================================
+ * PDF — 모든 페이지 하단 footer
+ * ========================================================================== */
+
+@media print {
+  .global-footer {
+    page-break-before: avoid;
+  }
+}
+
+/* PDF capture용 footer 스타일 */
+.pdf-page-footer {
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--ink-4);
+  padding: 12px 0;
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+}

@@ -263,3 +263,65 @@ export function loadAllResults(studentId) {
     return {};
   }
 }
+
+// ==========================================================
+// DB API 스텁 (D1 연결 전까지는 localStorage 폴백)
+// DB 연결 후에는 아래 함수들이 Worker API를 호출하도록 변경 예정
+// ==========================================================
+
+const DB_ENABLED = false; // D1 DB 연결 시 true로 변경
+
+/**
+ * 학생 등록/조회 — DB 연결 전에는 로컬에서 처리
+ * @param {{ school: string, grade: string, name: string, dob: string }} info
+ * @returns {Promise<{ studentId: string, isNew: boolean }>}
+ */
+export async function registerOrLoginStudent(info) {
+  if (DB_ENABLED) {
+    // TODO: Worker API 호출
+    // const res = await fetch(`${WORKER_URL}/api/student/register`, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(info),
+    // });
+    // return await res.json();
+  }
+  // localStorage 폴백 — 기존 makeStudentId 로직 유지
+  const studentId = makeStudentId(info);
+  return { studentId, isNew: false };
+}
+
+/**
+ * 시험 결과를 DB에 저장 — DB 연결 전에는 localStorage
+ * @param {string} studentId
+ * @param {string} subject
+ * @param {object} resultSnapshot
+ */
+export async function saveResultToDB(studentId, subject, resultSnapshot) {
+  if (DB_ENABLED) {
+    // TODO: Worker API 호출
+    // await fetch(`${WORKER_URL}/api/result/save`, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ studentId, subject, result: resultSnapshot }),
+    // });
+    // return;
+  }
+  // localStorage 폴백
+  saveSubjectResult(studentId, subject, resultSnapshot);
+}
+
+/**
+ * DB에서 결과 조회 — DB 연결 전에는 localStorage
+ * @param {string} studentId
+ * @returns {Promise<object>}
+ */
+export async function loadResultsFromDB(studentId) {
+  if (DB_ENABLED) {
+    // TODO: Worker API 호출
+    // const res = await fetch(`${WORKER_URL}/api/result/${studentId}`);
+    // return await res.json();
+  }
+  // localStorage 폴백
+  return loadAllResults(studentId);
+}
