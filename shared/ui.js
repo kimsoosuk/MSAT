@@ -495,7 +495,16 @@ export function createApp(config) {
       max: MAX,
     });
 
-    renderResult();
+    const root = $("#view-result");
+    root.innerHTML = `
+      <div class="result-body" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; text-align:center;">
+        <div class="ai-loading" style="margin-top:0;">
+          <div class="pulse"></div>
+          <div style="font-family: var(--serif); font-size: 1.5rem; margin-bottom: 8px; color: var(--ink);">채점 및 성적표 작성 중...</div>
+          <div class="hint" style="color: var(--ink-3);">서술형 문항 채점과 AI 분석이 진행되고 있습니다 (약 10-20초)</div>
+        </div>
+      </div>
+    `;
     showView("view-result");
 
     // Kick off AI grading + report
@@ -531,8 +540,9 @@ export function createApp(config) {
       ),
       el("div", { class: "section-detail-grid", id: "section-detail-grid" })
     );
+    const sectionDetailGrid = sectionDetailBlock.querySelector(".section-detail-grid");
     body.append(sectionDetailBlock);
-    renderSectionDetail($("#section-detail-grid"));
+    renderSectionDetail(sectionDetailGrid);
 
     // === Section 2: 문항별 결과표 ===
     const perQBlock = el("div", { class: "brain-section" },
@@ -544,8 +554,9 @@ export function createApp(config) {
       ),
       el("div", { id: "per-question-table" })
     );
+    const perQTable = perQBlock.querySelector("#per-question-table");
     body.append(perQBlock);
-    renderPerQuestionTable($("#per-question-table"));
+    renderPerQuestionTable(perQTable);
 
     // === Section 3: AI 리포트 ===
     const reportSection = el("div", { class: "brain-section" },
