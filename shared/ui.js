@@ -232,7 +232,7 @@ export function createApp(config) {
     const chartBox = el("div", { class: "passage-chart" });
     const maxV = Math.max(...data.map(d => d.v));
     data.forEach(d => {
-      const bar = el("div", { class: "bar", "data-val": d.v, style: `height: ${(d.v/maxV)*85}%;` });
+      const bar = el("div", { class: "bar", "data-val": d.v, style: `height: ${(d.v / maxV) * 85}%;` });
       chartBox.append(
         el("div", { class: "bar-group" },
           el("div", { style: "flex:1; display:flex; align-items:flex-end; width:100%; justify-content:center;" }, bar),
@@ -329,7 +329,7 @@ export function createApp(config) {
   function updateProgress() {
     const n = answeredCount();
     const total = QUESTIONS.length;
-    const pct = (n/total) * 100;
+    const pct = (n / total) * 100;
     const fill = $("#progress-fill");
     const text = $("#progress-text");
     if (fill) fill.style.width = `${pct}%`;
@@ -545,6 +545,7 @@ export function createApp(config) {
     renderSectionDetail(sectionDetailGrid);
 
     // === Section 2: 문항별 결과표 ===
+    body.append(el("div", { class: "html2pdf__page-break" }));
     const perQBlock = el("div", { class: "brain-section" },
       el("div", { class: "section-heading" },
         el("span", { class: "num" }, "02"),
@@ -559,17 +560,18 @@ export function createApp(config) {
     renderPerQuestionTable(perQTable);
 
     // === Section 3: 영어 레포트 ===
+    body.append(el("div", { class: "html2pdf__page-break" }));
     const reportSection = el("div", { class: "brain-section" },
       el("div", { class: "section-heading" },
         el("span", { class: "num" }, "03"),
-        el("h2", {}, `${SUBJECT_META.kr} 레포트`),
+        el("h2", {}, "진단 레포트"),
         el("span", { class: "sub" }, "Personalized Feedback"),
         el("div", { class: "line" })
       ),
       el("div", { class: "ai-report", id: "ai-report" },
         el("div", { class: "ai-loading", id: "ai-loading" },
           el("div", { class: "pulse" }),
-          el("div", { class: "msg" }, "AI가 성적을 분석하고 리포트를 작성하고 있습니다..."),
+          el("div", { class: "msg" }, "AI가 성적을 분석하고 레포트를 작성하고 있습니다..."),
           el("div", { class: "hint" }, "Analyzing · 10–20 seconds")
         )
       )
@@ -698,6 +700,9 @@ export function createApp(config) {
         card.append(noteDiv);
       }
 
+      if (s.section === 'B' || s.section === 'E') {
+        container.append(el("div", { class: "html2pdf__page-break" }));
+      }
       container.append(card);
     });
   }
@@ -771,15 +776,15 @@ export function createApp(config) {
       const z = r.regionRel[k];
 
       let badge = "";
-      if (idx === 0)      badge = "★ Top";
+      if (idx === 0) badge = "★ Top";
       else if (idx === 1) badge = "#2";
       else if (idx === 3) badge = "#4";
       else if (idx === 4) badge = "Lowest";
 
       let relLabel = "";
-      if (z > 0.8)        relLabel = "↑ Above profile avg";
-      else if (z < -0.8)  relLabel = "↓ Below profile avg";
-      else                relLabel = "≈ Near profile avg";
+      if (z > 0.8) relLabel = "↑ Above profile avg";
+      else if (z < -0.8) relLabel = "↓ Below profile avg";
+      else relLabel = "≈ Near profile avg";
 
       const card = el("div", { class: "region-card", style: `--region-color: ${reg.color};` },
         el("div", { class: "top" },
@@ -1227,7 +1232,7 @@ export function createApp(config) {
             '.report-content h3 { page-break-after: avoid; }',
             '.report-content h4 { page-break-after: avoid; }',
             '.brain-section { page-break-inside: auto; }',
-            '.global-footer { display: block !important; text-align: center; font-size: 0.72rem; color: #9a8d80; padding: 16px 0 8px; margin-top: 24px; }',
+            '.global-footer { display: none !important; }',
           ].join('\n');
           clonedDoc.head.appendChild(s);
 
@@ -1239,15 +1244,25 @@ export function createApp(config) {
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    html2pdf().set(opt).from(element).toPdf().get('pdf').then(function(pdf) {
+    html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
       const totalPages = pdf.internal.getNumberOfPages();
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 40;
+      const ctx = canvas.getContext('2d');
+      ctx.font = '16px sans-serif';
+      ctx.fillStyle = '#9a8d80';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('ⓒ지혜의산실', 200, 20);
+      const footerImg = canvas.toDataURL('image/png');
+
       for (let i = 1; i <= totalPages; i++) {
         pdf.setPage(i);
-        pdf.setFontSize(8);
-        pdf.setTextColor(154, 141, 128);
-        pdf.text('(C) jihyeui sansil', pageWidth / 2, pageHeight - 8, { align: 'center' });
+        pdf.addImage(footerImg, 'PNG', pageWidth / 2 - 20, pageHeight - 10, 40, 4);
       }
     }).save().then(() => {
       if (actions) actions.style.display = '';
@@ -1265,11 +1280,13 @@ export function createApp(config) {
     state,
     MAX,
     // 수동 조작용 (테스트)
-    _internal: { computeResult: writingScores => computeResult({
-      questions: QUESTIONS,
-      answers: state.answers,
-      writingScores,
-      max: MAX,
-    }) }
+    _internal: {
+      computeResult: writingScores => computeResult({
+        questions: QUESTIONS,
+        answers: state.answers,
+        writingScores,
+        max: MAX,
+      })
+    }
   };
 }
