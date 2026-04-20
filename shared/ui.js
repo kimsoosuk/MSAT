@@ -887,7 +887,7 @@ export function createApp(config) {
     bellWrap.append(bellTitle, bellSubtitle, bellCanvas);
 
     // ── 2) 레이더(육각형) 차트 ──
-    const radarWrap = el("div", { class: "comparison-chart-box page-break-before" });
+    const radarWrap = el("div", { class: "comparison-chart-box" });
     const radarTitle = el("div", { class: "comparison-chart-title" }, "섹션별 점수 비교");
     const radarSubtitle = el("div", { class: "comparison-chart-subtitle" }, "서울 강남 상위 10% 기준 대비");
     const radarCanvas = el("canvas", { id: "chart-radar" });
@@ -1646,10 +1646,8 @@ export function createApp(config) {
     const actions = element.querySelector('.report-actions');
     if (actions) actions.style.display = 'none';
 
-    document.body.classList.add('pdf-capture');
-
     const opt = {
-      margin: [10, 8, 18, 8],
+      margin: 0,
       filename: `${state.studentName || '학생'}_${SUBJECT_META.kr}_레포트.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: {
@@ -1660,28 +1658,25 @@ export function createApp(config) {
         onclone: function (clonedDoc) {
           const s = clonedDoc.createElement('style');
           s.textContent = [
-            'html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; overflow: visible !important; height: auto !important; }',
-            '.app, #view-result, .result-body { background: #ffffff !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; height: auto !important; }',
-            '* { -webkit-text-stroke: 0.2px currentColor; box-sizing: border-box !important; }',
+            'html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; overflow: visible !important; height: auto !important; -webkit-print-color-adjust: exact; }',
+            '.app, #view-result, .result-body { background: #ffffff !important; padding: 10mm 12mm !important; margin: 0 !important; overflow: visible !important; height: auto !important; }',
+            '* { -webkit-text-stroke: 0.1px currentColor; box-sizing: border-box !important; -webkit-filter: none !important; filter: none !important; }',
             '.score-summary { border: 1px solid #d9cfbe; border-radius: 8px; overflow: hidden; page-break-inside: avoid !important; }',
             '.score-cell { background: #fdfbf6; }',
-            '.section-detail-card { background: #fdfbf6; border: 1px solid #d9cfbe; page-break-inside: auto !important; margin: 10px 0 30px; }',
+            '.section-detail-card { background: #fdfbf6; border: 1px solid #d9cfbe; page-break-inside: auto !important; margin: 10px 0 30px !important; }',
             '.section-detail-guide, .section-detail-ai-note { page-break-inside: avoid !important; }',
-            '.per-q-table { page-break-inside: auto; border-collapse: collapse; }',
+            '.per-q-table { page-break-inside: auto; border-collapse: collapse; width: 100% !important; }',
             '.per-q-row { page-break-inside: avoid !important; }',
-            '.ai-report-section-wrap { page-break-inside: auto !important; margin: 10px 0 30px; }',
+            '.ai-report-section-wrap { page-break-inside: auto !important; margin: 10px 0 30px !important; }',
             '.ai-report-card { page-break-inside: auto !important; border: 1px solid #d9cfbe; }',
             '.ai-report-card h3, .ai-report-card h4, .ai-report-card h5 { page-break-after: avoid !important; page-break-inside: avoid !important; }',
             '.ai-report-card p, .ai-report-card ul, .ai-report-card ol, .ai-report-card li { page-break-inside: avoid !important; margin-bottom: 8px !important; }',
-            '.section-heading { page-break-before: always !important; break-before: page !important; page-break-after: avoid !important; margin: 40px 0 20px !important; display: block !important; }',
+            '.section-heading { page-break-before: always !important; break-before: page !important; page-break-after: avoid !important; margin: 0 !important; padding: 25mm 0 10mm 0 !important; display: block !important; }',
             '.comparison-chart-box, .radar-wrap { page-break-inside: avoid !important; margin: 20px 0 !important; }',
             '.page-break-before { page-break-before: always !important; break-before: page !important; }',
-            '.global-footer { display: none !important; }',
+            '.report-actions, .global-footer { display: none !important; }',
           ].join('\n');
           clonedDoc.head.appendChild(s);
-
-          const clonedActions = clonedDoc.querySelector('.report-actions');
-          if (clonedActions) clonedActions.style.display = 'none';
         }
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -1710,7 +1705,6 @@ export function createApp(config) {
       }
     }).save().then(() => {
       if (actions) actions.style.display = '';
-      document.body.classList.remove('pdf-capture');
     });
   }
 
