@@ -545,8 +545,7 @@ export function createApp(config) {
     renderSectionDetail(sectionDetailGrid);
 
     // === Section 2: 문항별 결과표 ===
-    body.append(el("div", { class: "html2pdf__page-break" }));
-    const perQBlock = el("div", { class: "brain-section" },
+    const perQBlock = el("div", { class: "brain-section page-break-before" },
       el("div", { class: "section-heading" },
         el("span", { class: "num" }, "02"),
         el("h2", {}, "문항별 결과"),
@@ -560,8 +559,7 @@ export function createApp(config) {
     renderPerQuestionTable(perQTable);
 
     // === Section 3: 영어 레포트 ===
-    body.append(el("div", { class: "html2pdf__page-break" }));
-    const reportSection = el("div", { class: "brain-section" },
+    const reportSection = el("div", { class: "brain-section page-break-before" },
       el("div", { class: "section-heading" },
         el("span", { class: "num" }, "03"),
         el("h2", {}, "진단 레포트"),
@@ -701,7 +699,7 @@ export function createApp(config) {
       }
 
       if (s.section === 'B' || s.section === 'E') {
-        container.append(el("div", { class: "html2pdf__page-break" }));
+        card.classList.add("page-break-before");
       }
       container.append(card);
     });
@@ -1236,13 +1234,17 @@ export function createApp(config) {
             '.result-body { background: transparent; }',
             '.score-summary { border: 1px solid #d9cfbe; border-radius: 8px; overflow: hidden; }',
             '.score-cell { background: #fdfbf6; }',
-            '.section-detail-card { background: #fdfbf6; border: 1px solid #d9cfbe; }',
+            '.page-break-before { page-break-before: always !important; break-before: page !important; }',
+            '.section-heading { page-break-after: avoid !important; break-after: avoid !important; }',
+            '.section-heading + * { page-break-before: avoid !important; break-before: avoid !important; }',
+            '.section-detail-card { background: #fdfbf6; border: 1px solid #d9cfbe; page-break-inside: avoid !important; break-inside: avoid !important; }',
             '.section-detail-guide { background: #f2ecdf; }',
             '.section-detail-ai-note { background: rgba(139, 42, 31, 0.03); }',
-            '.per-q-cell { background: #fdfbf6; }',
+            '.per-q-table { page-break-inside: auto; }',
+            '.per-q-row, .per-q-cell { page-break-inside: avoid !important; break-inside: avoid !important; }',
             '.report-content { page-break-inside: auto; }',
-            '.report-content h3 { page-break-after: avoid; }',
-            '.report-content h4 { page-break-after: avoid; }',
+            '.report-content h3, .report-content h4, .report-content h5 { page-break-after: avoid !important; break-after: avoid !important; }',
+            '.report-content p, .report-content ul, .report-content ol { page-break-inside: avoid !important; break-inside: avoid !important; }',
             '.brain-section { page-break-inside: auto; }',
             '.global-footer { display: none !important; }',
           ].join('\n');
@@ -1253,7 +1255,7 @@ export function createApp(config) {
         }
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      pagebreak: { mode: ['css', 'legacy'] }
     };
 
     html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
