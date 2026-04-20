@@ -1424,9 +1424,10 @@ export function createApp(config) {
             '.section-detail-ai-note { background: rgba(139, 42, 31, 0.03); }',
             '.per-q-table { page-break-inside: auto; }',
             '.per-q-row, .per-q-cell { page-break-inside: avoid !important; break-inside: avoid !important; }',
-            '.report-content { page-break-inside: auto; }',
-            '.report-content h3, .report-content h4, .report-content h5 { page-break-after: avoid !important; break-after: avoid !important; }',
-            '.report-content p, .report-content ul, .report-content ol { page-break-inside: avoid !important; break-inside: avoid !important; }',
+            '.ai-report-section-wrap { page-break-inside: avoid !important; break-inside: avoid !important; }',
+            '.ai-report-card { page-break-inside: avoid !important; break-inside: avoid !important; }',
+            '.ai-report-card h3, .ai-report-card h4, .ai-report-card h5 { page-break-after: avoid !important; break-after: avoid !important; }',
+            '.ai-report-card p, .ai-report-card ul, .ai-report-card ol { page-break-inside: avoid !important; break-inside: avoid !important; }',
             '.brain-section { page-break-inside: auto; }',
             '.global-footer { display: none !important; }',
           ].join('\n');

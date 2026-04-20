@@ -1342,17 +1342,12 @@
 
     /* AI Report */
     .ai-report {
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-md);
-      padding: 32px 28px;
       margin-top: 16px;
       position: relative;
-      overflow: hidden;
     }
 
     .ai-report::before {
+      display: none;
       content: "";
       position: absolute;
       top: 0;
@@ -1414,43 +1409,10 @@
       line-height: 1.75;
     }
 
-    .report-content p {
-      margin: 0 0 16px;
-      line-height: 1.7;
-    }
-
-    .report-content h3 {
-      font-family: var(--sans);
-      font-size: 1.3rem;
-      font-weight: 600;
-      color: var(--ink);
-      margin: 40px 0 16px;
-    }
-
-    .report-content h4 {
-      font-family: var(--sans);
-      font-size: 1.15rem;
-      font-weight: 600;
-      color: var(--ink);
-      margin: 32px 0 12px;
-    }
-
-    .report-content h5 {
-      font-family: var(--sans);
-      font-size: 1.05rem;
-      font-weight: 600;
+    .ai-report-card {
+      font-family: var(--serif);
       color: var(--ink-2);
-      margin: 24px 0 8px;
-    }
-
-    .report-content ul,
-    .report-content ol {
-      margin: 0 0 20px;
-      padding-left: 24px;
-    }
-
-    .report-content li {
-      margin-bottom: 8px;
+      line-height: 1.75;
     }
 
     .global-footer {
@@ -1462,7 +1424,7 @@
       margin-top: auto;
     }
 
-    .report-content h3 {
+    .ai-report-card h3 {
       font-family: var(--serif);
       font-size: 1.4rem;
       font-weight: 500;
@@ -1473,46 +1435,55 @@
       letter-spacing: -.01em;
     }
 
-    .report-content h3:first-child {
+    .ai-report-card h3:first-child {
       margin-top: 0;
       padding-top: 0;
       border-top: none;
     }
 
-    .report-content h4 {
-      font-family: var(--serif);
-      font-size: 1.1rem;
-      font-weight: 500;
+    .ai-report-card h4 {
+      font-family: var(--sans);
+      font-size: 1.2rem;
+      font-weight: 600;
       color: var(--ink);
-      margin: 20px 0 8px;
+      margin: 28px 0 10px;
     }
 
-    .report-content p {
+    .ai-report-card h5 {
+      font-family: var(--sans);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--ink-2);
+      margin: 24px 0 8px;
+    }
+
+    .ai-report-card p {
       margin: 0 0 14px;
       font-size: 1rem;
     }
 
-    .report-content ul {
+    .ai-report-card ul,
+    .ai-report-card ol {
       padding-left: 22px;
       margin: 10px 0 16px;
     }
 
-    .report-content li {
+    .ai-report-card li {
       margin-bottom: 6px;
       font-size: .98rem;
     }
 
-    .report-content strong {
+    .ai-report-card strong {
       color: var(--ink);
       font-weight: 600;
     }
 
-    .report-content em {
+    .ai-report-card em {
       font-style: italic;
       color: var(--accent);
     }
 
-    .report-content .intro-para {
+    .ai-report-card .intro-para {
       font-family: var(--serif);
       font-style: italic;
       font-size: 1.1rem;
@@ -1658,7 +1629,7 @@
         padding: 24px 20px;
       }
 
-      .report-content h3 {
+      .ai-report-card h3 {
         font-size: 1.2rem;
       }
 
@@ -1761,12 +1732,12 @@
       }
 
       /* Page break helpers */
-      .brain-section,
+      .ai-report-section-wrap,
       .words-section,
       .score-summary,
-      .report-content h3,
-      .report-content h4,
-      .report-content h5 {
+      .ai-report-card h3,
+      .ai-report-card h4,
+      .ai-report-card h5 {
         page-break-inside: avoid;
       }
 
