@@ -1617,7 +1617,7 @@ export function createApp(config) {
       const title = lines.shift().trim();
       const bodyMd = lines.join("\n").trim();
 
-      const wrap = el("div", { class: "ai-report-section-wrap page-break-before" });
+      const wrap = el("div", { class: "ai-report-section-wrap" });
       // 제목이 없으면 (예: 문서 맨 앞에 텍스트만 있는 경우) 그냥 카드만 렌더링
       if (title && !bodyMd && lines.length === 0) {
         // 본문 없이 제목만 있는 경우 (비정상 케이스 처리)
@@ -1673,11 +1673,13 @@ export function createApp(config) {
             '.section-detail-ai-note { background: rgba(139, 42, 31, 0.03); }',
             '.per-q-table { page-break-inside: auto; }',
             '.per-q-row, .per-q-cell { page-break-inside: avoid !important; break-inside: avoid !important; }',
-            '.ai-report-section-wrap { page-break-inside: avoid !important; break-inside: avoid !important; page-break-before: always !important; break-before: page !important; margin: 10px 0 40px; }',
+            '.ai-report-section-wrap { page-break-inside: avoid !important; break-inside: avoid !important; margin: 10px 0 30px; }',
             '.ai-report-card { page-break-inside: avoid !important; break-inside: avoid !important; border: 1px solid #d9cfbe; }',
             '.ai-report-card h3, .ai-report-card h4, .ai-report-card h5 { page-break-after: avoid !important; break-after: avoid !important; }',
-            '.ai-report-card p, .ai-report-card ul, .ai-report-card ol { page-break-inside: avoid !important; break-inside: avoid !important; }',
-            '.section-heading { page-break-before: always !important; break-before: page !important; page-break-after: avoid !important; break-after: avoid !important; margin-top: 20px; }',
+            '.ai-report-card p, .ai-report-card ul, .ai-report-card ol, .ai-report-card li { page-break-inside: avoid !important; break-inside: avoid !important; }',
+            '.section-heading { page-break-before: always !important; break-before: page !important; page-break-after: avoid !important; break-after: avoid !important; margin-top: 30px; margin-bottom: 20px; }',
+            '.comparison-chart-box { page-break-inside: avoid !important; break-inside: avoid !important; }',
+            '.page-break-before { page-break-before: always !important; break-before: page !important; }',
             '.global-footer { display: none !important; }',
           ].join('\n');
           clonedDoc.head.appendChild(s);
