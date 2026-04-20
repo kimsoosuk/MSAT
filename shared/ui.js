@@ -275,32 +275,64 @@ export function createApp(config) {
 
     root.append(wrap);
 
-    // 이미 응시한 과목인지 체크 (localStorage 기반)
-    const existingResults = loadAllResults(state.studentId);
-    const alreadyTaken = existingResults && existingResults[SUBJECT_META.id];
-
     const startBtn = $("#start-btn");
-    if (alreadyTaken) {
-      // 다시 풀기 방지: 버튼을 비활성화하고 이미 응시했음을 알림
+
+    // ── 1차: localStorage 즉시 확인 (빠른 UI 응답) ──────────────
+    const existingResults = loadAllResults(state.studentId);
+    const localRecord = existingResults && existingResults[SUBJECT_META.id];
+
+    function lockStartButton(localResult) {
       startBtn.disabled = true;
       startBtn.innerHTML = "✓ 이미 응시 완료";
       startBtn.style.cssText = "background: var(--success); cursor: not-allowed; opacity: 0.75;";
       // 결과 보기 버튼 추가
-      const viewResultBtn = el("button", { class: "btn btn-primary", style: "background: var(--accent);" },
-        el("span", {}, "결과 보기"),
-        el("span", { class: "arrow" }, "→")
-      );
-      viewResultBtn.addEventListener("click", () => {
-        state.result = alreadyTaken;
-        renderResult();
-        showView("view-result");
-      });
-      startBtn.parentElement.append(viewResultBtn);
+      if (!document.getElementById("view-result-btn")) {
+        const viewResultBtn = el("button", { class: "btn btn-primary", id: "view-result-btn", style: "background: var(--accent);" },
+          el("span", {}, "결과 보기"),
+          el("span", { class: "arrow" }, "→")
+        );
+        viewResultBtn.addEventListener("click", () => {
+          if (localResult) {
+            state.result = localResult;
+            renderResult();
+          }
+          showView("view-result");
+        });
+        startBtn.parentElement.append(viewResultBtn);
+      }
+    }
+
+    if (localRecord) {
+      // localStorage에 기록 있음 → 즉시 차단
+      lockStartButton(localRecord);
     } else {
+      // localStorage에 없더라도 DB에서 이중 확인
       startBtn.addEventListener("click", () => {
         renderTest();
         showView("view-test");
       });
+    }
+
+    // ── 2차: DB 비동기 확인 (더 강한 차단) ─────────────────────
+    if (state.studentId && WORKER_URL) {
+      fetch(`${WORKER_URL}/admin/student/${state.studentId}`, {
+        headers: { "X-Admin-Key": "msat2026" }
+      })
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null)
+        .then(data => {
+          const dbRecord = data?.subjects?.[SUBJECT_META.id];
+          if (dbRecord && !localRecord) {
+            // DB에는 있는데 localStorage엔 없는 경우 → 차단 & 버튼 교체
+            lockStartButton(null);
+            // 기존 start 이벤트 무력화
+            const oldBtn = $("#start-btn");
+            if (oldBtn) {
+              const newBtn = oldBtn.cloneNode(true);
+              oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+            }
+          }
+        });
     }
   }
 
