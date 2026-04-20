@@ -127,16 +127,16 @@ export const WORDS = {
 // 기본 5영역 매핑과는 독립적.
 // ============================================================
 export const COMPOUND_WORDS = [
-  { rank: 1,  word: "구조화",   fusion: ["frontal", "parietal"], note: "실행+정리" },
-  { rank: 2,  word: "추론",     fusion: ["temporal", "occipital"], note: "언어+상상" },
-  { rank: 3,  word: "맥락",     fusion: ["limbic", "temporal"], note: "감성+언어" },
-  { rank: 4,  word: "원리",     fusion: ["parietal", "temporal"], note: "정리+언어" },
-  { rank: 5,  word: "의도",     fusion: ["frontal", "limbic"], note: "실행+감성" },
-  { rank: 6,  word: "최적화",   fusion: ["frontal", "parietal"], note: "실행+정리" },
-  { rank: 7,  word: "분석",     fusion: ["frontal", "parietal"], note: "실행+정리" },
-  { rank: 8,  word: "예측",     fusion: ["frontal", "occipital"], note: "실행+상상" },
-  { rank: 9,  word: "비판",     fusion: ["frontal", "temporal"], note: "실행+언어" },
-  { rank: 10, word: "파악",     fusion: ["temporal", "occipital"], note: "언어+상상" },
+  { rank: 1, word: "구조화", fusion: ["frontal", "parietal"], note: "실행+정리" },
+  { rank: 2, word: "추론", fusion: ["temporal", "occipital"], note: "언어+상상" },
+  { rank: 3, word: "맥락", fusion: ["limbic", "temporal"], note: "감성+언어" },
+  { rank: 4, word: "원리", fusion: ["parietal", "temporal"], note: "정리+언어" },
+  { rank: 5, word: "의도", fusion: ["frontal", "limbic"], note: "실행+감성" },
+  { rank: 6, word: "최적화", fusion: ["frontal", "parietal"], note: "실행+정리" },
+  { rank: 7, word: "분석", fusion: ["frontal", "parietal"], note: "실행+정리" },
+  { rank: 8, word: "예측", fusion: ["frontal", "occipital"], note: "실행+상상" },
+  { rank: 9, word: "비판", fusion: ["frontal", "temporal"], note: "실행+언어" },
+  { rank: 10, word: "파악", fusion: ["temporal", "occipital"], note: "언어+상상" },
 ];
 
 // ============================================================
@@ -156,7 +156,7 @@ export const GRADE_CUTS = [
   { key: "A", label: "A", min: 85, color: "#b5812a", desc: "Strong" },
   { key: "B", label: "B", min: 70, color: "#5e7a3e", desc: "Developing" },
   { key: "C", label: "C", min: 40, color: "#3b6ea3", desc: "Emerging" },
-  { key: "D", label: "D", min: 0,  color: "#6b5d52", desc: "Foundational" },
+  { key: "D", label: "D", min: 0, color: "#6b5d52", desc: "Foundational" },
 ];
 
 export function gradeOf(score) {
@@ -279,7 +279,7 @@ export function loadAllResults(studentId) {
 // ==========================================================
 
 export const DB_ENABLED = true; // D1 DB 연결 시 true로 변경
-export const ADMIN_KEY = "msat2026"; 
+export const ADMIN_KEY = "msat2026";
 
 /**
  * 학생 등록/조회 — DB 연결 전에는 로컬에서 처리
