@@ -1,27 +1,45 @@
--- MSAT Database Schema for Cloudflare D1
--- 학생 정보 및 시험 결과를 저장하는 DB
+-- MSAT Database Schema (Cloudflare D1)
+-- 학생 정보 및 과목별 시험 결과 저장
 
+-- 학생 테이블 (익명 식별)
 CREATE TABLE IF NOT EXISTS students (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  school TEXT NOT NULL,
-  grade TEXT NOT NULL,
-  name TEXT NOT NULL,
-  dob TEXT NOT NULL,       -- 생년월일 6자리 (예: 120415)
-  student_hash TEXT NOT NULL UNIQUE,  -- school+name+dob 해시 (식별 키)
-  created_at TEXT DEFAULT (datetime('now'))
+  student_id     TEXT PRIMARY KEY,        -- SHA-256 hash 앞 16자
+  name           TEXT NOT NULL,
+  school         TEXT,
+  grade          TEXT,
+  dob            TEXT,                    -- 6자리 (생년월일)
+  first_seen_at  TEXT DEFAULT (datetime('now')),
+  last_seen_at   TEXT DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS results (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  student_id INTEGER NOT NULL,
-  subject TEXT NOT NULL,        -- 'english', 'math', 'korean' 등
-  result_json TEXT NOT NULL,    -- 시험 결과 스냅샷 (JSON)
-  created_at TEXT DEFAULT (datetime('now')),
-  FOREIGN KEY (student_id) REFERENCES students(id)
+-- 시험 결과 테이블
+CREATE TABLE IF NOT EXISTS exam_results (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  student_id     TEXT NOT NULL,
+  subject        TEXT NOT NULL,            -- 'english' | 'korean' | 'math'
+  version        TEXT NOT NULL DEFAULT '2026.04',
+  submitted_at   TEXT DEFAULT (datetime('now')),
+
+  -- 점수 데이터
+  total_points   REAL NOT NULL,
+  grade_label    TEXT NOT NULL,            -- 'S' | 'A' | 'B' | 'C' | 'D'
+  mc_correct     INTEGER,
+  mc_points      REAL,
+  writing_points REAL,
+
+  -- 상세 데이터 (JSON 문자열)
+  answers_json         TEXT,               -- 전체 답안
+  writing_grades_json  TEXT,               -- 서술형 채점 결과
+  region_abs_json      TEXT,               -- 뇌 영역 점수 {"limbic":72.5, ...}
+  word_intensity_json  TEXT,               -- 단어별 강도
+  per_section_json     TEXT,               -- 섹션별 점수/해설
+
+  -- AI 리포트 캐시 (필요시 바로 조회 가능)
+  subject_report_md    TEXT,
+
+  FOREIGN KEY (student_id) REFERENCES students(student_id)
 );
 
--- 같은 학생이 같은 과목을 여러 번 치를 수 있으므로 UNIQUE 제약 없음
--- 조회 성능을 위한 인덱스
-CREATE INDEX IF NOT EXISTS idx_results_student ON results(student_id);
-CREATE INDEX IF NOT EXISTS idx_results_subject ON results(subject);
-CREATE INDEX IF NOT EXISTS idx_students_hash ON students(student_hash);
+-- 성능 최적화를 위한 인덱스
+CREATE INDEX IF NOT EXISTS idx_exam_student_subject
+  ON exam_results(student_id, subject, submitted_at DESC);

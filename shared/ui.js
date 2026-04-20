@@ -28,7 +28,7 @@ import {
   WORKER_URL,
   makeStudentId,
   loadSession, saveSession,
-  saveSubjectResult,
+  saveResultToDB,
 } from "./data.js";
 
 import { computeResult, computeMaxScores } from "./scoring.js";
@@ -1054,22 +1054,34 @@ export function createApp(config) {
         max: MAX,
       });
 
-      // 결과를 localStorage에 저장 — 나중에 brain-report가 꺼내 쓸 용도
+      // 결과를 DB 및 localStorage에 저장
       try {
-        saveSubjectResult(state.studentId, SUBJECT_META.id, {
-          studentName: state.studentName,
-          school: state.school,
-          grade: state.grade,
-          // 사고력(brain) 리포트 생성에 필요한 최소 스냅샷
-          totalPoints: state.result.totalPoints,
-          grade_label: state.result.grade.label,
-          regionAbs: state.result.regionAbs,
-          regionPct: state.result.regionPct,
-          wordIntensity: state.result.wordIntensity,
-          perSection: state.result.perSection,
-        });
+        saveResultToDB(
+          {
+            studentId: state.studentId,
+            name: state.studentName,
+            school: state.school,
+            grade: state.grade,
+            dob: state.dob,
+          },
+          {
+            subject: SUBJECT_META.id,
+            version: "2026.04",
+            totalPoints: state.result.totalPoints,
+            gradeLabel: state.result.grade.label,
+            mcCorrect: state.result.mcCorrect,
+            mcPoints: state.result.mcPoints,
+            writingPoints: state.result.writingPoints,
+            answers: state.answers,
+            writingGrades: state.writingGrades,
+            regionAbs: state.result.regionAbs,
+            wordIntensity: state.result.wordIntensity,
+            perSection: state.result.perSection,
+            subjectReportMd: reportMarkdown,
+          }
+        );
       } catch (e) {
-        console.warn("Failed to save subject result:", e);
+        console.warn("Failed to save subject result to DB/local:", e);
       }
 
       // Re-render result top (score summary, regions, words, radar)

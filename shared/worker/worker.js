@@ -196,7 +196,121 @@ export default {
 
     const url = new URL(request.url);
 
-    if (request.method === "GET") {
+    // ============================================================
+    // DB Routes (Cloudflare D1)
+    // ============================================================
+
+    // 1) 학생 업서트 + 결과 저장
+    if (request.method === "POST" && url.pathname === "/save-result") {
+      if (!env.DB) return json({ error: "DB binding not found" }, 500);
+      try {
+        const { student, result } = await request.json();
+
+        // 학생 업서트
+        await env.DB.prepare(`
+          INSERT INTO students (student_id, name, school, grade, dob, last_seen_at)
+          VALUES (?1, ?2, ?3, ?4, ?5, datetime('now'))
+          ON CONFLICT(student_id) DO UPDATE SET
+            name = excluded.name,
+            school = excluded.school,
+            grade = excluded.grade,
+            last_seen_at = excluded.last_seen_at
+        `).bind(
+          student.studentId, student.name,
+          student.school || null, student.grade || null, student.dob || null
+        ).run();
+
+        // 결과 저장
+        await env.DB.prepare(`
+          INSERT INTO exam_results (
+            student_id, subject, version, total_points, grade_label,
+            mc_correct, mc_points, writing_points,
+            answers_json, writing_grades_json, region_abs_json,
+            word_intensity_json, per_section_json, subject_report_md
+          )
+          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+        `).bind(
+          student.studentId, result.subject, result.version || "2026.04",
+          result.totalPoints, result.gradeLabel,
+          result.mcCorrect, result.mcPoints, result.writingPoints,
+          JSON.stringify(result.answers || {}),
+          JSON.stringify(result.writingGrades || {}),
+          JSON.stringify(result.regionAbs || {}),
+          JSON.stringify(result.wordIntensity || {}),
+          JSON.stringify(result.perSection || {}),
+          result.subjectReportMd || null
+        ).run();
+
+        return json({ ok: true });
+      } catch (e) {
+        return json({ error: "DB save failed", detail: e.message }, 500);
+      }
+    }
+
+    // 2) 전체 학생 목록 (관리자용)
+    if (request.method === "GET" && url.pathname === "/admin/students") {
+      if (!env.DB) return json({ error: "DB binding not found" }, 500);
+      // 간단한 Admin Key 체크
+      const adminKey = request.headers.get("X-Admin-Key");
+      if (env.ADMIN_KEY && adminKey !== env.ADMIN_KEY) {
+        return json({ error: "Unauthorized" }, 401);
+      }
+
+      try {
+        const { results } = await env.DB.prepare(`
+          SELECT s.student_id, s.name, s.school, s.grade, s.last_seen_at,
+                 GROUP_CONCAT(DISTINCT r.subject) as subjects_completed
+          FROM students s
+          LEFT JOIN exam_results r ON r.student_id = s.student_id
+          GROUP BY s.student_id
+          ORDER BY s.last_seen_at DESC
+          LIMIT 200
+        `).all();
+        return json({ students: results });
+      } catch (e) {
+        return json({ error: "DB query failed", detail: e.message }, 500);
+      }
+    }
+
+    // 3) 특정 학생 결과 상세 (Brain Report용)
+    if (request.method === "GET" && url.pathname.startsWith("/admin/student/")) {
+      if (!env.DB) return json({ error: "DB binding not found" }, 500);
+      const adminKey = request.headers.get("X-Admin-Key");
+      if (env.ADMIN_KEY && adminKey !== env.ADMIN_KEY) {
+        return json({ error: "Unauthorized" }, 401);
+      }
+
+      const studentId = url.pathname.split("/").pop();
+      try {
+        const { results } = await env.DB.prepare(`
+          SELECT subject, total_points, grade_label, submitted_at,
+                 region_abs_json, word_intensity_json, per_section_json,
+                 subject_report_md
+          FROM exam_results
+          WHERE student_id = ?1
+          ORDER BY submitted_at DESC
+        `).bind(studentId).all();
+
+        // 과목별 최신 하나씩만 정리
+        const latest = {};
+        for (const r of results) {
+          if (!latest[r.subject]) {
+            latest[r.subject] = {
+              ...r,
+              regionAbs: JSON.parse(r.region_abs_json || "{}"),
+              wordIntensity: JSON.parse(r.word_intensity_json || "{}"),
+              perSection: JSON.parse(r.per_section_json || "{}"),
+            };
+          }
+        }
+        return json({ subjects: latest });
+      } catch (e) {
+        return json({ error: "DB query failed", detail: e.message }, 500);
+      }
+    }
+
+    // 4) 기본 상태 체크 (GET /)
+    if (request.method === "GET" && url.pathname === "/") {
       return json({
         service: "MSAT · Gemini Worker",
         models: { primary: MODEL_PRIMARY, fallback: MODEL_FALLBACK },

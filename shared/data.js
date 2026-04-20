@@ -269,7 +269,8 @@ export function loadAllResults(studentId) {
 // DB 연결 후에는 아래 함수들이 Worker API를 호출하도록 변경 예정
 // ==========================================================
 
-const DB_ENABLED = false; // D1 DB 연결 시 true로 변경
+export const DB_ENABLED = true; // D1 DB 연결 시 true로 변경
+export const ADMIN_KEY = "msat2026"; 
 
 /**
  * 학생 등록/조회 — DB 연결 전에는 로컬에서 처리
@@ -278,16 +279,11 @@ const DB_ENABLED = false; // D1 DB 연결 시 true로 변경
  */
 export async function registerOrLoginStudent(info) {
   if (DB_ENABLED) {
-    // TODO: Worker API 호출
-    // const res = await fetch(`${WORKER_URL}/api/student/register`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(info),
-    // });
-    // return await res.json();
+    // DB가 켜져 있어도 studentId 생성 로직은 동일하게 유지 (SHA-256)
+    // Worker 측 /save-result 에서 students 테이블에 자동 업서트되므로 별도 호출 불필요할 수 있으나,
+    // 로그인 여부만 체크하는 용도로는 유지 가능.
   }
-  // localStorage 폴백 — 기존 makeStudentId 로직 유지
-  const studentId = makeStudentId(info);
+  const studentId = await makeStudentId(info);
   return { studentId, isNew: false };
 }
 
@@ -297,18 +293,21 @@ export async function registerOrLoginStudent(info) {
  * @param {string} subject
  * @param {object} resultSnapshot
  */
-export async function saveResultToDB(studentId, subject, resultSnapshot) {
+export async function saveResultToDB(student, resultSnapshot) {
   if (DB_ENABLED) {
-    // TODO: Worker API 호출
-    // await fetch(`${WORKER_URL}/api/result/save`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ studentId, subject, result: resultSnapshot }),
-    // });
-    // return;
+    try {
+      const resp = await fetch(`${WORKER_URL}/save-result`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student, result: resultSnapshot }),
+      });
+      if (!resp.ok) throw new Error("DB save failed");
+    } catch (e) {
+      console.warn("DB save failed, falling back to local:", e);
+    }
   }
-  // localStorage 폴백
-  saveSubjectResult(studentId, subject, resultSnapshot);
+  // localStorage 폴백은 항상 수행 (오프라인 대비)
+  saveSubjectResult(student.studentId, resultSnapshot.subject, resultSnapshot);
 }
 
 /**
@@ -318,10 +317,17 @@ export async function saveResultToDB(studentId, subject, resultSnapshot) {
  */
 export async function loadResultsFromDB(studentId) {
   if (DB_ENABLED) {
-    // TODO: Worker API 호출
-    // const res = await fetch(`${WORKER_URL}/api/result/${studentId}`);
-    // return await res.json();
+    try {
+      const resp = await fetch(`${WORKER_URL}/admin/student/${studentId}`, {
+        headers: { "X-Admin-Key": ADMIN_KEY }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        return data.subjects; // { english: {...}, math: {...} }
+      }
+    } catch (e) {
+      console.warn("DB load failed:", e);
+    }
   }
-  // localStorage 폴백
   return loadAllResults(studentId);
 }

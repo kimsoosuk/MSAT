@@ -1,3 +1,8 @@
 name = "msat-english"
 main = "worker.js"
 compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "msat-db"
+database_id = "d8df06ab-2c27-4ce5-ba2a-eb01083322ca"
