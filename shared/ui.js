@@ -1226,14 +1226,13 @@ export function createApp(config) {
         scale: 2,
         useCORS: true,
         scrollY: 0,
-        backgroundColor: '#faf6ef',
+        backgroundColor: '#ffffff',
         onclone: function (clonedDoc) {
           const s = clonedDoc.createElement('style');
           s.textContent = [
             'body::before { display:none !important; }',
-            '#view-result, .app { opacity:1 !important; animation:none !important; }',
+            'body, .app, #view-result, .result-body { background: #ffffff !important; opacity:1 !important; animation:none !important; }',
             '* { -webkit-text-stroke: 0.2px currentColor; }',
-            '.result-body { background: transparent; }',
             '.score-summary { border: 1px solid #d9cfbe; border-radius: 8px; overflow: hidden; }',
             '.score-cell { background: #fdfbf6; }',
             '.page-break-before { page-break-before: always !important; break-before: page !important; }',
