@@ -190,7 +190,7 @@ export function getMcPoints(n) {
 //   POST /?type=brain                    → 3과목 통합 사고력 리포트 (미래)
 //   GET  /                               → 헬스체크
 // ============================================================
-export const WORKER_URL = "https://msat-english.kimsoosuk1.workers.dev/";
+export const WORKER_URL = "https://msat-english.kimsoosuk1.workers.dev";
 
 // ============================================================
 // 학생 식별자 (DB 이행 대비)
