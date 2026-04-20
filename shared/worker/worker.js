@@ -22,7 +22,7 @@ const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, X-Admin-Key",
   "Access-Control-Max-Age": "86400",
 };
 
