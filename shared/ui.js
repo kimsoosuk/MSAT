@@ -299,7 +299,7 @@ export function createApp(config) {
     const existingResults = loadAllResults(state.studentId);
     const localRecord = existingResults && existingResults[SUBJECT_META.id];
 
-    function lockStartButton(localResult) {
+    function lockStartButton(dbResult) {
       isAlreadyTaken = true;
       startBtn.disabled = true;
       startBtn.innerHTML = "✓ 이미 응시 완료";
@@ -311,11 +311,19 @@ export function createApp(config) {
           el("span", { class: "arrow" }, "→")
         );
         viewResultBtn.addEventListener("click", () => {
-          if (localResult) {
-            state.result = localResult;
+          // 우선순위: DB 최신 데이터(dbResult) > 로컬 데이터(localRecord)
+          const r = dbResult || localRecord;
+          if (r) {
+            // DB 필드명(subject_report_md) -> UI 필드명(subjectReportMd) 변환
+            if (r.subject_report_md && !r.subjectReportMd) {
+              r.subjectReportMd = r.subject_report_md;
+            }
+            state.result = r;
             renderResult();
+            showView("view-result");
+          } else {
+            alert("결과 데이터를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
           }
-          showView("view-result");
         });
         startBtn.parentElement.append(viewResultBtn);
       }
@@ -342,9 +350,9 @@ export function createApp(config) {
         .catch(() => null)
         .then(data => {
           const dbRecord = data?.subjects?.[SUBJECT_META.id];
-          if (dbRecord && !isAlreadyTaken) {
-            // DB에는 있는데 아직 차단 안 된 경우 → 차단
-            lockStartButton(null);
+          if (dbRecord) {
+            // DB 기록이 있으면 항상 최신 데이터로 업데이트 가능하도록 전달
+            lockStartButton(dbRecord);
           }
         });
     }
@@ -1604,24 +1612,23 @@ export function createApp(config) {
           const s = clonedDoc.createElement('style');
           s.textContent = [
             'body::before { display:none !important; }',
-            'body, .app, #view-result, .result-body { background: #ffffff !important; opacity:1 !important; animation:none !important; }',
+            'body, .app, #view-result, .result-body { background: #ffffff !important; opacity:1 !important; animation:none !important; overflow: visible !important; height: auto !important; }',
             '* { -webkit-text-stroke: 0.2px currentColor; }',
             '.score-summary { border: 1px solid #d9cfbe; border-radius: 8px; overflow: hidden; }',
             '.score-cell { background: #fdfbf6; }',
             '.page-break-before { page-break-before: always !important; break-before: page !important; }',
             '.section-heading { page-break-after: avoid !important; break-after: avoid !important; }',
             '.section-heading + * { page-break-before: avoid !important; break-before: avoid !important; }',
-            '.section-detail-card { background: #fdfbf6; border: 1px solid #d9cfbe; page-break-inside: avoid !important; break-inside: avoid !important; }',
+            '.section-detail-card { background: #fdfbf6; border: 1px solid #d9cfbe; page-break-inside: avoid !important; break-inside: avoid !important; margin: 10px 0 30px; }',
             '.section-detail-guide { background: #f2ecdf; }',
             '.section-detail-ai-note { background: rgba(139, 42, 31, 0.03); }',
             '.per-q-table { page-break-inside: auto; }',
             '.per-q-row, .per-q-cell { page-break-inside: avoid !important; break-inside: avoid !important; }',
-            '.ai-report-section-wrap { page-break-inside: avoid !important; break-inside: avoid !important; }',
-            '.ai-report-card { page-break-inside: avoid !important; break-inside: avoid !important; }',
+            '.ai-report-section-wrap { page-break-inside: avoid !important; break-inside: avoid !important; page-break-before: always !important; break-before: page !important; margin: 10px 0 40px; }',
+            '.ai-report-card { page-break-inside: avoid !important; break-inside: avoid !important; border: 1px solid #d9cfbe; }',
             '.ai-report-card h3, .ai-report-card h4, .ai-report-card h5 { page-break-after: avoid !important; break-after: avoid !important; }',
             '.ai-report-card p, .ai-report-card ul, .ai-report-card ol { page-break-inside: avoid !important; break-inside: avoid !important; }',
-            '.brain-section { page-break-inside: auto; }',
-            '.ai-report-section-wrap { page-break-before: always !important; break-before: page !important; }',
+            '.section-heading { page-break-before: always !important; break-before: page !important; page-break-after: avoid !important; break-after: avoid !important; margin-top: 20px; }',
             '.global-footer { display: none !important; }',
           ].join('\n');
           clonedDoc.head.appendChild(s);
