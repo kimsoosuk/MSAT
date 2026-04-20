@@ -145,7 +145,7 @@ export function createApp(config) {
 
       // 상태 강제 주입
       state.studentId = sid;
-      state.studentName = "학생"; // 어드민 학생 목록에서 이름이 있으면 좋으나, 현재 API 응답엔 없음
+      state.studentName = urlParams.get("student_name") || "학생";
       state.result = {
         totalPoints: sData.total_points,
         grade: { label: sData.grade_label, desc: "", bg: "", fg: "" }, // 색상 등은 gradeOf로 재계산 가능

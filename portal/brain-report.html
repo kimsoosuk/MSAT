@@ -306,7 +306,7 @@
             const done = completed.includes(subId);
             const label = { english: "영어", korean: "국어", math: "수학" }[subId];
             if (done) {
-              return `<button class="subject-chip done" onclick="window.open('../${subId}/index.html?admin_view=1&student_id=${s.student_id}', '_blank')" style="cursor:pointer; border:none; display:inline-flex; align-items:center; gap:4px;">${label} 레포트 보기</button>`;
+              return `<button class="subject-chip done" onclick="window.open('../${subId}/index.html?admin_view=1&student_id=${s.student_id}&student_name=${encodeURIComponent(s.name)}', '_blank')" style="cursor:pointer; border:none; display:inline-flex; align-items:center; gap:4px;">${label} 레포트 보기</button>`;
             } else {
               return `<span class="subject-chip" style="opacity:0.5;">${label} 미응시</span>`;
             }
