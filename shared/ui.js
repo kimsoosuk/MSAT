@@ -133,7 +133,7 @@ export function createApp(config) {
     showView("view-result");
     const root = $("#view-result");
     root.innerHTML = `<div class="ai-loading" style="padding:60px 20px;"><div class="pulse"></div><div class="msg">학생 데이터를 불러오는 중...</div></div>`;
-    
+
     try {
       const resp = await fetch(`${WORKER_URL}/admin/student/${sid}`, {
         headers: { "X-Admin-Key": "msat2026" } // 하드코딩된 어드민 키 사용 (차후 환경변수로 개선)
@@ -160,10 +160,10 @@ export function createApp(config) {
         regionAbs: sData.regionAbs || {},
         wordIntensity: sData.wordIntensity || {}
       };
-      
+
       // 등급 라벨 재계산
       state.result.grade = gradeOf(state.result.totalPoints);
-      
+
       // 문항별 디테일 (perQuestionTable 렌더링용)
       const answers = sData.answers || {};
       state.answers = answers;
@@ -178,11 +178,11 @@ export function createApp(config) {
       });
 
       state.writingGrades = sData.writingGrades || {};
-      
+
       // UI 렌더링
       renderResult();
       renderAIReport(sData.subject_report_md || "", "DB Saved", null);
-      
+
       // 관리자 뷰어에서는 하단에 닫기 버튼 추가
       const actions = $(".report-actions");
       if (actions) {
@@ -275,11 +275,33 @@ export function createApp(config) {
 
     root.append(wrap);
 
+    // 이미 응시한 과목인지 체크 (localStorage 기반)
+    const existingResults = loadAllResults(state.studentId);
+    const alreadyTaken = existingResults && existingResults[SUBJECT_META.id];
+
     const startBtn = $("#start-btn");
-    startBtn.addEventListener("click", () => {
-      renderTest();
-      showView("view-test");
-    });
+    if (alreadyTaken) {
+      // 다시 풀기 방지: 버튼을 비활성화하고 이미 응시했음을 알림
+      startBtn.disabled = true;
+      startBtn.innerHTML = "✓ 이미 응시 완료";
+      startBtn.style.cssText = "background: var(--success); cursor: not-allowed; opacity: 0.75;";
+      // 결과 보기 버튼 추가
+      const viewResultBtn = el("button", { class: "btn btn-primary", style: "background: var(--accent);" },
+        el("span", {}, "결과 보기"),
+        el("span", { class: "arrow" }, "→")
+      );
+      viewResultBtn.addEventListener("click", () => {
+        state.result = alreadyTaken;
+        renderResult();
+        showView("view-result");
+      });
+      startBtn.parentElement.append(viewResultBtn);
+    } else {
+      startBtn.addEventListener("click", () => {
+        renderTest();
+        showView("view-test");
+      });
+    }
   }
 
   // ==========================================================
@@ -660,8 +682,7 @@ export function createApp(config) {
     body.append(
       el("div", { class: "report-actions" },
         el("a", { href: "../", class: "btn btn-ghost" }, "← 과목 선택으로"),
-        el("button", { class: "btn btn-ghost", onclick: generatePDF }, "📄  PDF 저장"),
-        el("button", { class: "btn btn-ghost", onclick: () => location.reload() }, "↻  다시 풀기")
+        el("button", { class: "btn btn-ghost", onclick: generatePDF }, "PDF 저장")
       )
     );
 
@@ -724,47 +745,89 @@ export function createApp(config) {
     const r = state.result;
     container.innerHTML = "";
 
-    // 1) 상단 막대그래프 (강남 상위 10% 비교) 추가
-    const chartWrap = el("div", { class: "section-chart-wrap" });
-    const canvas = el("canvas", { id: "section-chart" });
-    chartWrap.append(canvas);
-    container.append(chartWrap);
+    // ─────────────────────────────────────────────
+    // 통계 유틸 (정규분포)
+    // 평균 82점, 표준편차 9.5점 (강남 시뮬레이션 기반)
+    // ─────────────────────────────────────────────
+    const DIST_MEAN = 82;
+    const DIST_SD   = 9.5;
 
-    // 차트 데이터 준비
-    const sectionIds = [];
-    const studentAcc = [];
-    const top10Acc = [];
+    function normalPdf(x, mu, sigma) {
+      return Math.exp(-0.5 * ((x - mu) / sigma) ** 2) / (sigma * Math.sqrt(2 * Math.PI));
+    }
+    function normalCdf(z) {
+      const t = 1 / (1 + 0.2316419 * Math.abs(z));
+      const d = 0.3989422804 * Math.exp(-z * z / 2);
+      const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+      return z > 0 ? 1 - prob : prob;
+    }
+    function percentileRank(score) {
+      const z = (score - DIST_MEAN) / DIST_SD;
+      const p = 1 - normalCdf(z);
+      return Math.max(1, Math.min(99, Math.round(p * 100)));
+    }
 
-    const top10Data = GANGNAM_TOP10[SUBJECT_META.id] || {};
+    const totalScore = r.totalPoints;
+    const pctRank = percentileRank(totalScore);
 
-    Object.values(r.perSection).forEach(s => {
-      sectionIds.push(`Sec ${s.section}`);
-      studentAcc.push(s.pct);
-      top10Acc.push(top10Data[s.section] || 90); // default 90 if missing
-    });
+    // ─────────────────────────────────────────────
+    // 차트 컨테이너 래퍼 (위/아래 두 개)
+    // ─────────────────────────────────────────────
+    const chartsWrap = el("div", { class: "comparison-charts-wrap" });
 
-    // Chart.js 렌더링
+    // ── 1) 정규분포 곡선 차트 ──
+    const bellWrap = el("div", { class: "comparison-chart-box" });
+    const bellTitle = el("div", { class: "comparison-chart-title" }, "총점 분포 내 위치");
+    const bellSubtitle = el("div", { class: "comparison-chart-subtitle" }, `강남 1000명 기준 · 상위 ${pctRank}%`);
+    const bellCanvas = el("canvas", { id: "chart-bell" });
+    bellWrap.append(bellTitle, bellSubtitle, bellCanvas);
+
+    // ── 2) 레이더(육각형) 차트 ──
+    const radarWrap = el("div", { class: "comparison-chart-box" });
+    const radarTitle = el("div", { class: "comparison-chart-title" }, "섹션별 능력 비교");
+    const radarSubtitle = el("div", { class: "comparison-chart-subtitle" }, "강남 상위 10% 기준 대비");
+    const radarCanvas = el("canvas", { id: "chart-radar" });
+    radarWrap.append(radarTitle, radarSubtitle, radarCanvas);
+
+    chartsWrap.append(bellWrap, radarWrap);
+    container.append(chartsWrap);
+
+    // ── Chart.js 렌더링 ──
     if (typeof Chart !== "undefined") {
-      new Chart(canvas, {
-        type: 'bar',
+      // 1) Bell Curve (Line Chart)
+      const xs = [];
+      const ys = [];
+      for (let x = 40; x <= 100; x += 0.5) {
+        xs.push(Math.round(x * 10) / 10);
+        ys.push(normalPdf(x, DIST_MEAN, DIST_SD));
+      }
+
+      // 학생 점수 수직선용 annotation 대신, 학생 점수에 해당하는 PDF 값 포인트 배열 생성
+      const studentYs = xs.map(x => (Math.abs(x - totalScore) < 0.3 ? normalPdf(x, DIST_MEAN, DIST_SD) : null));
+
+      new Chart(bellCanvas, {
+        type: "line",
         data: {
-          labels: sectionIds,
+          labels: xs,
           datasets: [
             {
-              label: '상위 10% 평균',
-              data: top10Acc,
-              backgroundColor: 'rgba(107, 93, 82, 0.2)', // ink-3 연하게
-              borderColor: 'var(--ink-3)',
-              borderWidth: 1,
-              borderRadius: 3
+              label: "점수 분포",
+              data: ys,
+              borderColor: "rgba(107, 93, 82, 0.5)",
+              backgroundColor: "rgba(107, 93, 82, 0.08)",
+              borderWidth: 1.5,
+              pointRadius: 0,
+              fill: true,
+              tension: 0.4,
             },
             {
-              label: '나의 정답률',
-              data: studentAcc,
-              backgroundColor: 'var(--accent-2)',
-              borderColor: 'var(--accent-2)',
-              borderWidth: 1,
-              borderRadius: 3
+              label: `내 점수 (${totalScore}점 · 상위 ${pctRank}%)`,
+              data: studentYs,
+              borderColor: "#c4711f",
+              backgroundColor: "#c4711f",
+              pointRadius: xs.map(x => Math.abs(x - totalScore) < 0.3 ? 7 : 0),
+              pointStyle: "circle",
+              showLine: false,
             }
           ]
         },
@@ -772,32 +835,99 @@ export function createApp(config) {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: {
-              beginAtZero: true,
-              max: 100,
-              ticks: { stepSize: 20, font: { family: "'JetBrains Mono', monospace", size: 10 }, color: "var(--ink-4)" },
-              grid: { color: "rgba(107, 93, 82, 0.1)" }
-            },
             x: {
-              ticks: { font: { family: "'Inter', sans-serif", size: 11, weight: "500" }, color: "var(--ink-2)" },
-              grid: { display: false }
+              type: "linear",
+              min: 40, max: 100,
+              ticks: {
+                stepSize: 10,
+                font: { family: "'Inter', sans-serif", size: 10 },
+                color: "rgba(107, 93, 82, 0.7)"
+              },
+              grid: { color: "rgba(107, 93, 82, 0.08)" },
+              title: { display: true, text: "총점", font: { size: 11 }, color: "rgba(107, 93, 82, 0.6)" }
+            },
+            y: {
+              display: false,
             }
           },
           plugins: {
             legend: {
-              position: 'top',
-              labels: {
-                font: { family: "'Noto Sans KR', sans-serif", size: 12 },
-                usePointStyle: true,
-                boxWidth: 8
+              position: "bottom",
+              labels: { font: { family: "'Noto Sans KR', sans-serif", size: 11 }, boxWidth: 10, usePointStyle: true }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => ctx.datasetIndex === 1 ? `상위 ${pctRank}%` : null,
+                title: ctx => `${ctx[0].label}점`
               }
+            }
+          }
+        }
+      });
+
+      // 2) Radar Chart (Section A~F, G 제외)
+      const top10Data = GANGNAM_TOP10[SUBJECT_META.id] || {};
+      const radarSections = ["A", "B", "C", "D", "E", "F"];
+      const radarLabels = radarSections.map(id => {
+        const sec = SECTIONS.find(s => s.id === id);
+        return sec ? `${id}: ${sec.kr || sec.en}` : id;
+      });
+      const studentRadar = radarSections.map(id => {
+        const s = Object.values(r.perSection).find(s => s.section === id);
+        return s ? s.pct : 0;
+      });
+      const top10Radar = radarSections.map(id => top10Data[id] || 90);
+
+      new Chart(radarCanvas, {
+        type: "radar",
+        data: {
+          labels: radarLabels,
+          datasets: [
+            {
+              label: "강남 상위 10%",
+              data: top10Radar,
+              borderColor: "rgba(107, 93, 82, 0.5)",
+              backgroundColor: "rgba(107, 93, 82, 0.12)",
+              borderWidth: 1.5,
+              pointRadius: 3,
+              pointBackgroundColor: "rgba(107, 93, 82, 0.5)",
+            },
+            {
+              label: "나의 점수",
+              data: studentRadar,
+              borderColor: "#c4711f",
+              backgroundColor: "rgba(196, 113, 31, 0.18)",
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: "#c4711f",
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 0, max: 100,
+              ticks: { stepSize: 25, font: { size: 9 }, color: "rgba(107, 93, 82, 0.5)", backdropColor: "transparent" },
+              grid: { color: "rgba(107, 93, 82, 0.12)" },
+              angleLines: { color: "rgba(107, 93, 82, 0.15)" },
+              pointLabels: { font: { family: "'Noto Sans KR', sans-serif", size: 10, weight: "500" }, color: "rgba(26, 22, 18, 0.75)" }
+            }
+          },
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: { font: { family: "'Noto Sans KR', sans-serif", size: 11 }, boxWidth: 10, usePointStyle: true }
             }
           }
         }
       });
     }
 
+    // ─────────────────────────────────────────────
     // 2) 개별 섹션 카드 렌더링
+    // ─────────────────────────────────────────────
     const sectionMeta = {};
     SECTIONS.forEach(s => { sectionMeta[s.id] = s; });
 
@@ -861,6 +991,7 @@ export function createApp(config) {
       container.append(card);
     });
   }
+
 
   // 문항별 결과표
   function renderPerQuestionTable(container) {
@@ -1362,12 +1493,12 @@ export function createApp(config) {
     sections.forEach(sec => {
       const trimmed = sec.trim();
       if (!trimmed) return;
-      
+
       const lines = trimmed.split("\n");
       // 첫 줄이 소제목, 나머지가 내용
       const title = lines.shift().trim();
       const bodyMd = lines.join("\n").trim();
-      
+
       const wrap = el("div", { class: "ai-report-section-wrap" });
       // 제목이 없으면 (예: 문서 맨 앞에 텍스트만 있는 경우) 그냥 카드만 렌더링
       if (title && !bodyMd && lines.length === 0) {

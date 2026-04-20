@@ -1861,6 +1861,43 @@
   letter-spacing: 0.04em;
 }
 
+/* Comparison Charts (Bell + Radar) */
+.comparison-charts-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.comparison-chart-box {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 20px 20px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.comparison-chart-title {
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.comparison-chart-subtitle {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-4);
+  letter-spacing: 0.06em;
+  margin-bottom: 16px;
+}
+
+.comparison-chart-box canvas {
+  height: 220px !important;
+  width: 100% !important;
+}
+
 /* AI Report Cards */
 .ai-report-section-wrap {
   margin-bottom: 48px;
