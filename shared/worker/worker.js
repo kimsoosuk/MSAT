@@ -284,6 +284,8 @@ export default {
       try {
         const { results } = await env.DB.prepare(`
           SELECT subject, total_points, grade_label, submitted_at,
+                 mc_correct, mc_points, writing_points,
+                 answers_json, writing_grades_json,
                  region_abs_json, word_intensity_json, per_section_json,
                  subject_report_md
           FROM exam_results
@@ -300,6 +302,8 @@ export default {
               regionAbs: JSON.parse(r.region_abs_json || "{}"),
               wordIntensity: JSON.parse(r.word_intensity_json || "{}"),
               perSection: JSON.parse(r.per_section_json || "{}"),
+              answers: JSON.parse(r.answers_json || "{}"),
+              writingGrades: JSON.parse(r.writing_grades_json || "{}"),
             };
           }
         }

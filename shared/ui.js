@@ -29,6 +29,7 @@ import {
   makeStudentId,
   loadSession, saveSession,
   saveResultToDB,
+  GANGNAM_TOP10,
 } from "./data.js";
 
 import { computeResult, computeMaxScores } from "./scoring.js";
@@ -115,6 +116,84 @@ export function createApp(config) {
   // Helper: question lookup
   const getQ = n => QUESTIONS.find(q => q.n === n);
   const getSection = id => SECTIONS.find(s => s.id === id);
+
+  // ==========================================================
+  // 관리자 뷰어 모드 (URL 쿼리 기반)
+  // ==========================================================
+  const urlParams = new URLSearchParams(window.location.search);
+  const isAdminView = urlParams.get("admin_view") === "1";
+  const adminStudentId = urlParams.get("student_id");
+
+  if (isAdminView && adminStudentId) {
+    fetchAdminDataAndRender(adminStudentId);
+    return; // 일반 흐름 중단
+  }
+
+  async function fetchAdminDataAndRender(sid) {
+    showView("view-result");
+    const root = $("#view-result");
+    root.innerHTML = `<div class="ai-loading" style="padding:60px 20px;"><div class="pulse"></div><div class="msg">학생 데이터를 불러오는 중...</div></div>`;
+    
+    try {
+      const resp = await fetch(`${WORKER_URL}/admin/student/${sid}`, {
+        headers: { "X-Admin-Key": "msat-admin-2026" } // 하드코딩된 어드민 키 사용 (차후 환경변수로 개선)
+      });
+      if (!resp.ok) throw new Error("데이터를 불러오지 못했습니다.");
+      const data = await resp.json();
+      const sData = data.subjects && data.subjects[SUBJECT_META.id];
+      if (!sData) throw new Error("해당 과목의 응시 기록이 없습니다.");
+
+      // 상태 강제 주입
+      state.studentId = sid;
+      state.studentName = "학생"; // 어드민 학생 목록에서 이름이 있으면 좋으나, 현재 API 응답엔 없음
+      state.result = {
+        totalPoints: sData.total_points,
+        grade: { label: sData.grade_label, desc: "", bg: "", fg: "" }, // 색상 등은 gradeOf로 재계산 가능
+        mcCorrect: sData.mc_correct || 0,
+        mcPoints: sData.mc_points || 0,
+        writingPoints: sData.writing_points || 0,
+        mcTotal: QUESTIONS.filter(q => q.type === "mc").length,
+        mcPointsMax: MAX.mc,
+        writingPointsMax: MAX.writing,
+        perQuestion: {}, // 디테일은 생략하거나 answers에서 재계산
+        perSection: sData.perSection || {},
+        regionAbs: sData.regionAbs || {},
+        wordIntensity: sData.wordIntensity || {}
+      };
+      
+      // 등급 라벨 재계산
+      state.result.grade = gradeOf(state.result.totalPoints);
+      
+      // 문항별 디테일 (perQuestionTable 렌더링용)
+      const answers = sData.answers || {};
+      state.answers = answers;
+      QUESTIONS.forEach(q => {
+        const ua = answers[q.n];
+        let correct = false;
+        if (q.type === 'mc' && ua !== undefined && ua == q.a) correct = true;
+        state.result.perQuestion[q.n] = {
+          n: q.n, section: q.section, type: q.type, type_label: q.type_label,
+          userAnswer: ua, correctAnswer: q.a, correct
+        };
+      });
+
+      state.writingGrades = sData.writingGrades || {};
+      
+      // UI 렌더링
+      renderResult();
+      renderAIReport(sData.subject_report_md || "", "DB Saved", null);
+      
+      // 관리자 뷰어에서는 하단에 닫기 버튼 추가
+      const actions = $(".report-actions");
+      if (actions) {
+        const closeBtn = el("button", { class: "btn btn-ghost", onclick: () => window.close() }, "창 닫기");
+        actions.insertBefore(closeBtn, actions.firstChild);
+      }
+
+    } catch (e) {
+      root.innerHTML = `<div class="empty-state">오류: ${e.message}</div>`;
+    }
+  }
 
   // ==========================================================
   // Cover (intro) — 학생 정보는 루트 랜딩에서 이미 입력됨.
@@ -645,7 +724,80 @@ export function createApp(config) {
     const r = state.result;
     container.innerHTML = "";
 
-    // 섹션 메타 매핑
+    // 1) 상단 막대그래프 (강남 상위 10% 비교) 추가
+    const chartWrap = el("div", { class: "section-chart-wrap" });
+    const canvas = el("canvas", { id: "section-chart" });
+    chartWrap.append(canvas);
+    container.append(chartWrap);
+
+    // 차트 데이터 준비
+    const sectionIds = [];
+    const studentAcc = [];
+    const top10Acc = [];
+
+    const top10Data = GANGNAM_TOP10[SUBJECT_META.id] || {};
+
+    Object.values(r.perSection).forEach(s => {
+      sectionIds.push(`Sec ${s.section}`);
+      studentAcc.push(s.pct);
+      top10Acc.push(top10Data[s.section] || 90); // default 90 if missing
+    });
+
+    // Chart.js 렌더링
+    if (typeof Chart !== "undefined") {
+      new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: sectionIds,
+          datasets: [
+            {
+              label: '상위 10% 평균',
+              data: top10Acc,
+              backgroundColor: 'rgba(107, 93, 82, 0.2)', // ink-3 연하게
+              borderColor: 'var(--ink-3)',
+              borderWidth: 1,
+              borderRadius: 3
+            },
+            {
+              label: '나의 정답률',
+              data: studentAcc,
+              backgroundColor: 'var(--accent-2)',
+              borderColor: 'var(--accent-2)',
+              borderWidth: 1,
+              borderRadius: 3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: { stepSize: 20, font: { family: "'JetBrains Mono', monospace", size: 10 }, color: "var(--ink-4)" },
+              grid: { color: "rgba(107, 93, 82, 0.1)" }
+            },
+            x: {
+              ticks: { font: { family: "'Inter', sans-serif", size: 11, weight: "500" }, color: "var(--ink-2)" },
+              grid: { display: false }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                font: { family: "'Noto Sans KR', sans-serif", size: 12 },
+                usePointStyle: true,
+                boxWidth: 8
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 2) 개별 섹션 카드 렌더링
     const sectionMeta = {};
     SECTIONS.forEach(s => { sectionMeta[s.id] = s; });
 
@@ -654,28 +806,31 @@ export function createApp(config) {
       const enName = meta?.en || s.section;
       const krName = meta?.kr || "";
 
-      // 레벨 (bar 시각화용)
+      // 레벨
       const pct = s.pct;
       let levelClass = "";
       if (pct >= 85) levelClass = "level-high";
       else if (pct >= 60) levelClass = "level-mid";
       else levelClass = "level-low";
 
-      // 능력 설명 + 점수 기반 가이드
       const guide = pct >= 70 ? (meta?.highGuide || "") : (meta?.lowGuide || "");
+
+      // 조각난 막대그래프 생성
+      const segments = [];
+      for (let i = 0; i < s.totalQ; i++) {
+        const isFilled = i < s.correctQ;
+        segments.push(el("div", { class: `segment-block ${isFilled ? 'filled' : 'empty'}` }));
+      }
+      const segmentTrack = el("div", { class: "segment-track" }, ...segments);
 
       const card = el("div", { class: `section-detail-card ${levelClass}` },
         el("div", { class: "section-detail-head" },
           el("div", { class: "section-detail-id" }, `Section ${s.section}`),
-          el("div", { class: "section-detail-pct" }, `${pct}%`)
+          el("div", { class: "section-detail-pct" }, `${s.correctQ} / ${s.totalQ}`)
         ),
         el("div", { class: "section-detail-name" }, `${enName}${krName ? " · " + krName : ""}`),
-        el("div", { class: "section-detail-bar" },
-          el("div", { class: "section-detail-bar-fill", style: `width: ${pct}%;` })
-        ),
+        el("div", { class: "section-detail-bar" }, segmentTrack),
         el("div", { class: "section-detail-stats" },
-          el("span", {}, `정답 ${s.correctQ}/${s.totalQ}`),
-          el("span", {}, " · "),
           el("span", {}, `${s.pointsEarned}/${s.pointsMax}점`)
         )
       );
@@ -1199,9 +1354,35 @@ export function createApp(config) {
     const container = $("#ai-report");
     if (!container) return;
     container.innerHTML = "";
-    const content = el("div", { class: "report-content" });
-    content.innerHTML = miniMarkdown(markdown);
-    container.append(content);
+
+    // Normalize ## to ### to handle both cases
+    const md = markdown.replace(/^##\s+/gm, "### ");
+    const sections = md.split(/^###\s+/m);
+
+    sections.forEach(sec => {
+      const trimmed = sec.trim();
+      if (!trimmed) return;
+      
+      const lines = trimmed.split("\n");
+      // 첫 줄이 소제목, 나머지가 내용
+      const title = lines.shift().trim();
+      const bodyMd = lines.join("\n").trim();
+      
+      const wrap = el("div", { class: "ai-report-section-wrap" });
+      // 제목이 없으면 (예: 문서 맨 앞에 텍스트만 있는 경우) 그냥 카드만 렌더링
+      if (title && !bodyMd && lines.length === 0) {
+        // 본문 없이 제목만 있는 경우 (비정상 케이스 처리)
+        const card = el("div", { class: "ai-report-card" });
+        card.innerHTML = miniMarkdown(title);
+        wrap.append(card);
+      } else {
+        const h3 = el("h3", { class: "card-title-outside" }, title);
+        const card = el("div", { class: "ai-report-card" });
+        card.innerHTML = miniMarkdown(bodyMd);
+        wrap.append(h3, card);
+      }
+      container.append(wrap);
+    });
   }
 
   // ==========================================================

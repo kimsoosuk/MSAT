@@ -251,19 +251,18 @@
 
     .subject-card-title {
       font-family: var(--serif);
-      font-variation-settings: "opsz" 144;
-      font-style: italic;
-      font-weight: 400;
-      font-size: 2rem;
+      font-weight: 500;
+      font-size: 1.8rem;
       color: var(--ink);
-      line-height: 1.1;
-      margin: 8px 0 6px;
+      line-height: 1.2;
+      margin: 8px 0 4px;
       letter-spacing: -0.01em;
     }
 
-    .subject-card-kr {
+    .subject-card-en {
       font-family: var(--serif);
-      font-size: 1rem;
+      font-style: italic;
+      font-size: 1.1rem;
       color: var(--ink-2);
     }
 
@@ -527,8 +526,8 @@
           ${statusBadge}
           <div>
             <div class="subject-card-label">Subject</div>
-            <div class="subject-card-title">${s.label}</div>
-            <div class="subject-card-kr">${s.kr}</div>
+            <div class="subject-card-title">${s.kr}</div>
+            <div class="subject-card-en">${s.label}</div>
           </div>
           <div class="subject-card-meta">
             <span>30문항 · ${s.time}</span>

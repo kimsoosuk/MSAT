@@ -278,49 +278,94 @@
       }
     }
 
-    function showChooser() {
+    async function showChooser() {
       showView("chooser-view");
-      const all = readAllLocalStudents();
       const list = $("#student-list");
-      list.innerHTML = "";
+      list.innerHTML = '<div class="ai-loading" style="padding:40px;"><div class="pulse"></div><div class="msg">DB에서 학생 목록을 불러오는 중...</div></div>';
 
-      const entries = Object.entries(all);
-      if (entries.length === 0) {
-        list.innerHTML = '<div class="empty-state">이 기기에 저장된 학생 기록이 없습니다.<br>학생이 이 브라우저에서 시험을 쳤어야 표시됩니다.</div>';
-        return;
-      }
-
-      entries.forEach(([studentId, subjectMap]) => {
-        const firstKey = Object.keys(subjectMap)[0];
-        const first = subjectMap[firstKey] || {};
-        const name = first.studentName || "(이름 없음)";
-        const school = first.school || "";
-        const grade = first.grade || "";
-        const headline = [name, school, grade].filter(Boolean).join(" · ");
-
-        const subjectChips = ["english", "korean", "math"].map(subId => {
-          const done = !!subjectMap[subId];
-          const label = { english: "영어", korean: "국어", math: "수학" }[subId];
-          return `<span class="subject-chip ${done ? 'done' : ''}">${label}${done ? ` · ${subjectMap[subId].totalPoints}점` : " · 미응시"}</span>`;
-        }).join("");
-
-        const entry = document.createElement("div");
-        entry.className = "student-entry";
-        entry.innerHTML = `
-          <div class="student-entry-main">
-            <div class="student-entry-name">${escapeHtml(headline)}</div>
-            <div class="student-entry-id">${studentId}</div>
-            <div class="student-entry-subjects">${subjectChips}</div>
-          </div>
-          <button class="btn btn-primary" data-sid="${studentId}">
-            리포트 생성 →
-          </button>
-        `;
-        entry.querySelector("button").addEventListener("click", () => {
-          generateReport(studentId, subjectMap);
+      try {
+        const resp = await fetch(`${WORKER_URL}/admin/students`, {
+          headers: { "X-Admin-Key": ADMIN_KEY }
         });
-        list.appendChild(entry);
-      });
+        if (!resp.ok) throw new Error("API 연동 오류");
+        const data = await resp.json();
+        const students = data.students || [];
+
+        list.innerHTML = "";
+        if (students.length === 0) {
+          list.innerHTML = '<div class="empty-state">DB에 저장된 학생 기록이 없습니다.</div>';
+          return;
+        }
+
+        students.forEach(s => {
+          const headline = [s.name, s.school, s.grade].filter(Boolean).join(" · ");
+          const completed = (s.subjects_completed || "").split(",");
+
+          // 과목 상태 칩 + 뷰어 열기 버튼 생성
+          const subjectChips = ["english", "korean", "math"].map(subId => {
+            const done = completed.includes(subId);
+            const label = { english: "영어", korean: "국어", math: "수학" }[subId];
+            if (done) {
+              return `<button class="subject-chip done" onclick="window.open('../${subId}/index.html?admin_view=1&student_id=${s.student_id}', '_blank')" style="cursor:pointer; border:none; display:inline-flex; align-items:center; gap:4px;">${label} 레포트 보기</button>`;
+            } else {
+              return `<span class="subject-chip" style="opacity:0.5;">${label} 미응시</span>`;
+            }
+          }).join("");
+
+          const entry = document.createElement("div");
+          entry.className = "student-entry";
+          entry.innerHTML = `
+            <div class="student-entry-main">
+              <div class="student-entry-name">${escapeHtml(headline)}</div>
+              <div class="student-entry-id">${s.student_id} · 최근 응시: ${s.last_seen_at}</div>
+              <div class="student-entry-subjects">${subjectChips}</div>
+            </div>
+            <button class="btn btn-primary" data-sid="${s.student_id}">
+              통합 Brain Report →
+            </button>
+          `;
+          
+          entry.querySelector(".btn-primary").addEventListener("click", async () => {
+            // Brain Report를 위해서는 모든 과목의 상세 JSON이 필요하므로 먼저 fetch
+            const btn = entry.querySelector(".btn-primary");
+            btn.disabled = true;
+            btn.textContent = "불러오는 중...";
+            try {
+              const res = await fetch(`${WORKER_URL}/admin/student/${s.student_id}`, {
+                headers: { "X-Admin-Key": ADMIN_KEY }
+              });
+              if (!res.ok) throw new Error("데이터 페치 실패");
+              const detailData = await res.json();
+              if (Object.keys(detailData.subjects || {}).length === 0) {
+                 alert("시험 결과 데이터가 없습니다.");
+                 return;
+              }
+              // 이전 localStorage 포맷(subjectMap)으로 변환 후 generateReport 호출
+              const subjectMap = {};
+              for (const [subId, r] of Object.entries(detailData.subjects)) {
+                subjectMap[subId] = {
+                  studentName: s.name,
+                  school: s.school,
+                  grade: s.grade,
+                  totalPoints: r.total_points,
+                  regionAbs: r.regionAbs,
+                  wordIntensity: r.wordIntensity,
+                  perSection: r.perSection
+                };
+              }
+              generateReport(s.student_id, subjectMap);
+            } catch(e) {
+              alert(e.message);
+            } finally {
+              btn.disabled = false;
+              btn.textContent = "통합 Brain Report →";
+            }
+          });
+          list.appendChild(entry);
+        });
+      } catch (err) {
+        list.innerHTML = `<div class="empty-state" style="color:var(--accent);">학생 목록을 불러올 수 없습니다.<br>${err.message}</div>`;
+      }
     }
 
     function escapeHtml(s) {

@@ -39,7 +39,7 @@
 
       --serif: 'Fraunces', 'Noto Serif KR', Georgia, serif;
       --sans: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
-      --mono: 'JetBrains Mono', ui-monospace, monospace;
+      --mono: var(--sans);
 
       --radius-sm: 4px;
       --radius-md: 8px;
@@ -1858,28 +1858,66 @@
   margin-bottom: 12px;
 }
 
-.section-detail-bar {
+.section-chart-wrap {
+  width: 100%;
+  height: 240px;
+  margin-bottom: 24px;
+}
+
+.segment-track {
+  display: flex;
+  gap: 3px;
   height: 6px;
-  background: var(--line);
-  border-radius: 3px;
-  overflow: hidden;
+  width: 100%;
   margin-bottom: 10px;
 }
-.section-detail-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  background: var(--ink-3);
-  transition: width 0.8s cubic-bezier(.4,0,.2,1);
+
+.segment-block {
+  flex: 1;
+  border-radius: 2px;
+  background: var(--line);
+  transition: background 0.3s;
 }
-.section-detail-card.level-high .section-detail-bar-fill { background: var(--success); }
-.section-detail-card.level-mid  .section-detail-bar-fill { background: var(--gold); }
-.section-detail-card.level-low  .section-detail-bar-fill { background: var(--accent); }
+
+.section-detail-card.level-high .segment-block.filled { background: var(--success); }
+.section-detail-card.level-mid  .segment-block.filled { background: var(--gold); }
+.section-detail-card.level-low  .segment-block.filled { background: var(--accent); }
 
 .section-detail-stats {
   font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--ink-3);
   letter-spacing: 0.04em;
+}
+
+/* AI Report Cards */
+.ai-report-section-wrap {
+  margin-bottom: 24px;
+  page-break-inside: avoid;
+}
+
+.card-title-outside {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin: 0 0 10px 4px;
+}
+
+.ai-report-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.ai-report-card h4 {
+  margin-top: 0;
+}
+
+.ai-report-card p:last-child {
+  margin-bottom: 0;
 }
 
 /* Per-question table */
