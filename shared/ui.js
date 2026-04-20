@@ -545,7 +545,8 @@ export function createApp(config) {
     renderSectionDetail(sectionDetailGrid);
 
     // === Section 2: 문항별 결과표 ===
-    const perQBlock = el("div", { class: "brain-section page-break-before" },
+    body.append(el("div", { class: "html2pdf__page-break" }));
+    const perQBlock = el("div", { class: "brain-section" },
       el("div", { class: "section-heading" },
         el("span", { class: "num" }, "02"),
         el("h2", {}, "문항별 결과"),
@@ -559,7 +560,8 @@ export function createApp(config) {
     renderPerQuestionTable(perQTable);
 
     // === Section 3: 영어 레포트 ===
-    const reportSection = el("div", { class: "brain-section page-break-before" },
+    body.append(el("div", { class: "html2pdf__page-break" }));
+    const reportSection = el("div", { class: "brain-section" },
       el("div", { class: "section-heading" },
         el("span", { class: "num" }, "03"),
         el("h2", {}, "진단 레포트"),

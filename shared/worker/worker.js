@@ -64,7 +64,7 @@ async function callGemini(model, apiKey, prompt) {
     generationConfig: {
       temperature: 0.8,
       topP: 0.95,
-      maxOutputTokens: 3500,
+      maxOutputTokens: 8192,
     },
     safetySettings: [
       { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
