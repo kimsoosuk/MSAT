@@ -29,6 +29,7 @@ import {
   makeStudentId,
   loadSession, saveSession,
   saveResultToDB,
+  loadAllResults,
   GANGNAM_TOP10,
 } from "./data.js";
 
@@ -277,15 +278,19 @@ export function createApp(config) {
 
     const startBtn = $("#start-btn");
 
+    // 이미 응시 여부 플래그 (1차 로컬, 2차 DB에서 업데이트)
+    let isAlreadyTaken = false;
+
     // ── 1차: localStorage 즉시 확인 (빠른 UI 응답) ──────────────
     const existingResults = loadAllResults(state.studentId);
     const localRecord = existingResults && existingResults[SUBJECT_META.id];
 
     function lockStartButton(localResult) {
+      isAlreadyTaken = true;
       startBtn.disabled = true;
       startBtn.innerHTML = "✓ 이미 응시 완료";
       startBtn.style.cssText = "background: var(--success); cursor: not-allowed; opacity: 0.75;";
-      // 결과 보기 버튼 추가
+      // 결과 보기 버튼 추가 (중복 방지)
       if (!document.getElementById("view-result-btn")) {
         const viewResultBtn = el("button", { class: "btn btn-primary", id: "view-result-btn", style: "background: var(--accent);" },
           el("span", {}, "결과 보기"),
@@ -305,13 +310,14 @@ export function createApp(config) {
     if (localRecord) {
       // localStorage에 기록 있음 → 즉시 차단
       lockStartButton(localRecord);
-    } else {
-      // localStorage에 없더라도 DB에서 이중 확인
-      startBtn.addEventListener("click", () => {
-        renderTest();
-        showView("view-test");
-      });
     }
+
+    // Start 버튼 클릭: 플래그 재확인 후 실행 (1차 + 2차 DB 체크 완료 후 안전)
+    startBtn.addEventListener("click", () => {
+      if (isAlreadyTaken) return; // 이미 응시 완료 → 무시
+      renderTest();
+      showView("view-test");
+    });
 
     // ── 2차: DB 비동기 확인 (더 강한 차단) ─────────────────────
     if (state.studentId && WORKER_URL) {
@@ -322,19 +328,14 @@ export function createApp(config) {
         .catch(() => null)
         .then(data => {
           const dbRecord = data?.subjects?.[SUBJECT_META.id];
-          if (dbRecord && !localRecord) {
-            // DB에는 있는데 localStorage엔 없는 경우 → 차단 & 버튼 교체
+          if (dbRecord && !isAlreadyTaken) {
+            // DB에는 있는데 아직 차단 안 된 경우 → 차단
             lockStartButton(null);
-            // 기존 start 이벤트 무력화
-            const oldBtn = $("#start-btn");
-            if (oldBtn) {
-              const newBtn = oldBtn.cloneNode(true);
-              oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-            }
           }
         });
     }
   }
+
 
   // ==========================================================
   // Passage (Section A용)
