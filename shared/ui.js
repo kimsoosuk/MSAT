@@ -312,14 +312,63 @@ export function createApp(config) {
         );
         viewResultBtn.addEventListener("click", () => {
           // 우선순위: DB 최신 데이터(dbResult) > 로컬 데이터(localRecord)
-          const r = dbResult || localRecord;
+          let r = dbResult || localRecord;
           if (r) {
+            // DB에서 온 데이터면 UI에 맞게 구조 재구성 (fetchAdminDataAndRender와 유사)
+            if (r.total_points !== undefined && !r.totalPoints) r.totalPoints = r.total_points;
+            if (r.mc_correct !== undefined && !r.mcCorrect) r.mcCorrect = r.mc_correct;
+            if (r.mc_points !== undefined && !r.mcPoints) r.mcPoints = r.mc_points;
+            if (r.writing_points !== undefined && !r.writingPoints) r.writingPoints = r.writing_points;
+
+            // 필수 객체 복구
+            if (!r.grade && r.totalPoints !== undefined) {
+              r.grade = gradeOf(r.totalPoints);
+            }
+            if (!r.mcTotal) r.mcTotal = QUESTIONS.filter(q => q.type === "mc").length;
+            if (!r.mcPointsMax) r.mcPointsMax = MAX.mc;
+            if (!r.writingPointsMax) r.writingPointsMax = MAX.writing;
+
+            // 문항별 디테일 복구 (perQuestionTable 렌더링용)
+            const answers = r.answers || {};
+            if (!r.perQuestion) {
+              r.perQuestion = {};
+              QUESTIONS.forEach(q => {
+                const ua = answers[q.n];
+                let correct = false;
+                if (q.type === 'mc' && ua !== undefined && ua !== null && String(ua) === String(q.answer)) correct = true;
+                r.perQuestion[q.n] = {
+                  n: q.n, section: q.section, type: q.type, type_label: q.type_label,
+                  userAnswer: ua, correctAnswer: q.answer, correct
+                };
+              });
+            }
+
             // DB 필드명(subject_report_md) -> UI 필드명(subjectReportMd) 변환
             if (r.subject_report_md && !r.subjectReportMd) {
               r.subjectReportMd = r.subject_report_md;
             }
+
             state.result = r;
+            state.answers = answers;
+            state.writingGrades = r.writingGrades || {};
+
             renderResult();
+
+            // 저장된 sectionNotes를 파싱하여 섹션 카드에 주입
+            if (r.subjectReportMd) {
+              let savedSectionNotes = null;
+              const sectionMatch = r.subjectReportMd.match(/===SECTION_DETAIL_START===([\s\S]*?)===SECTION_DETAIL_END===/);
+              if (sectionMatch) {
+                savedSectionNotes = {};
+                const sectionRegex = /\[SECTION_([A-G])\]([\s\S]*?)(?=\[SECTION_[A-G]\]|$)/g;
+                let m;
+                while ((m = sectionRegex.exec(sectionMatch[1])) !== null) {
+                  savedSectionNotes[m[1]] = m[2].trim();
+                }
+              }
+              renderAIReport(r.subjectReportMd, r.model || "Gemini", savedSectionNotes);
+            }
+
             showView("view-result");
           } else {
             alert("결과 데이터를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
