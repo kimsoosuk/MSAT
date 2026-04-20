@@ -597,7 +597,7 @@
       grid.className = "brain-grid";
 
       const radarWrap = document.createElement("div");
-      radarWrap.className = "radar-wrap";
+      radarWrap.className = "radar-wrap page-break-before";
       radarWrap.innerHTML = `
         <div class="radar-title">Radar · 영역 활성도</div>
         <div class="radar-canvas-wrap"><canvas id="radar-chart"></canvas></div>
@@ -717,8 +717,8 @@
         block = block.trim();
         if (!block) return "";
         if (/^###\s+/.test(block))  return `<h4>${inline(block.replace(/^###\s+/, ""))}</h4>`;
-        if (/^##\s+/.test(block))   return `<h3>${inline(block.replace(/^##\s+/, ""))}</h3>`;
-        if (/^#\s+/.test(block))    return `<h3>${inline(block.replace(/^#\s+/, ""))}</h3>`;
+        if (/^##\s+/.test(block))   return `<h3 class="page-break-before">${inline(block.replace(/^##\s+/, ""))}</h3>`;
+        if (/^#\s+/.test(block))    return `<h3 class="page-break-before">${inline(block.replace(/^#\s+/, ""))}</h3>`;
         if (/^(\-|\*)\s+/m.test(block) && block.split("\n").every(l => /^(\-|\*)\s+|^\s*$/.test(l))) {
           const items = block.split("\n").filter(l => l.trim()).map(l => `<li>${inline(l.replace(/^(\-|\*)\s+/, ""))}</li>`).join("");
           return `<ul>${items}</ul>`;
@@ -747,20 +747,55 @@
       if (actions) actions.style.display = 'none';
 
       const opt = {
-        margin: [10, 0, 15, 0],
+        margin: [10, 8, 18, 8],
         filename: `${name || '학생'}_통합사고력리포트.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, scrollY: 0, backgroundColor: '#faf6ef',
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          scrollY: 0,
+          backgroundColor: '#faf6ef',
           onclone: (clonedDoc) => {
             const s = clonedDoc.createElement('style');
-            s.textContent = ['body::before { display:none !important; }', '* { -webkit-text-stroke: 0.3px currentColor; }'].join('\n');
+            s.textContent = [
+              'body::before { display:none !important; }',
+              'body, .app, #view-result { background: #faf6ef !important; }',
+              '* { -webkit-text-stroke: 0.3px currentColor; }',
+              '.page-break-before { page-break-before: always !important; break-before: page !important; }',
+              '.section-heading { page-break-after: avoid !important; break-after: avoid !important; }',
+              '.region-card { page-break-inside: avoid !important; break-inside: avoid !important; }',
+              '.report-content h3 { page-break-after: avoid !important; break-after: avoid !important; }',
+              '.report-content p, .report-content ul, .report-content ol { page-break-inside: avoid !important; break-inside: avoid !important; }',
+              '.global-footer { display: none !important; }',
+            ].join('\n');
             clonedDoc.head.appendChild(s);
           }
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        pagebreak: { mode: ['css', 'legacy'] }
       };
-      html2pdf().set(opt).from(element).save().then(() => {
+
+      html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
+        const totalPages = pdf.internal.getNumberOfPages();
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 40;
+        const ctx = canvas.getContext('2d');
+        ctx.font = '16px sans-serif';
+        ctx.fillStyle = '#9a8d80';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('ⓒ지혜의산실', 200, 20);
+        const footerImg = canvas.toDataURL('image/png');
+
+        for (let i = 1; i <= totalPages; i++) {
+          pdf.setPage(i);
+          pdf.addImage(footerImg, 'PNG', pageWidth / 2 - 20, pageHeight - 10, 40, 4);
+        }
+      }).save().then(() => {
         if (actions) actions.style.display = '';
       });
     }

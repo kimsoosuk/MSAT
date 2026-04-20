@@ -2123,6 +2123,13 @@
   }
 }
 
+/* PDF/Print Utilities */
+.page-break-before {
+  page-break-before: always !important;
+  break-before: page !important;
+}
+
+
 /* PDF capture용 footer 스타일 */
 .pdf-page-footer {
   text-align: center;
