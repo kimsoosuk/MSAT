@@ -136,7 +136,7 @@ export function createApp(config) {
     
     try {
       const resp = await fetch(`${WORKER_URL}/admin/student/${sid}`, {
-        headers: { "X-Admin-Key": "msat-admin-2026" } // 하드코딩된 어드민 키 사용 (차후 환경변수로 개선)
+        headers: { "X-Admin-Key": "msat2026" } // 하드코딩된 어드민 키 사용 (차후 환경변수로 개선)
       });
       if (!resp.ok) throw new Error("데이터를 불러오지 못했습니다.");
       const data = await resp.json();
