@@ -1546,7 +1546,9 @@ export function createApp(config) {
     container.innerHTML = "";
 
     // Normalize ## to ### to handle both cases
-    const md = markdown.replace(/^##\s+/gm, "### ");
+    // DB에서 불러온 경우 하단에 메타 데이터가 붙어있을 수 있으므로 분리
+    const rawContent = markdown.split("===SECTION_DETAIL_START===")[0].trim();
+    const md = rawContent.replace(/^##\s+/gm, "### ");
     const sections = md.split(/^###\s+/m);
 
     sections.forEach(sec => {
