@@ -1,5 +1,6 @@
 # Node
-node_modules/
+node_modules
+node_modules.nosync
 package-lock.json
 
 # Wrangler
