@@ -1879,23 +1879,28 @@
 
 .comparison-chart-title {
   font-family: var(--serif);
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 1.15rem;
+  font-weight: 600;
   color: var(--ink);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .comparison-chart-subtitle {
   font-family: var(--mono);
-  font-size: 0.72rem;
-  color: var(--ink-4);
-  letter-spacing: 0.06em;
-  margin-bottom: 16px;
+  font-size: 0.82rem;
+  color: var(--ink-3);
+  letter-spacing: 0.05em;
+  margin-bottom: 18px;
 }
 
 .comparison-chart-box canvas {
-  height: 220px !important;
+  height: 260px !important;
   width: 100% !important;
+}
+
+/* 레이더 차트는 더 크게 */
+.comparison-chart-box:last-child canvas {
+  height: 320px !important;
 }
 
 /* AI Report Cards */

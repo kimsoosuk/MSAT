@@ -171,10 +171,11 @@ export function createApp(config) {
       QUESTIONS.forEach(q => {
         const ua = answers[q.n];
         let correct = false;
-        if (q.type === 'mc' && ua !== undefined && ua == q.a) correct = true;
+        // mc: 정답 비교 (문자열 vs 문자열 강제 비교) - english/questions.js의 속성명은 'answer'임
+        if (q.type === 'mc' && ua !== undefined && ua !== null && String(ua) === String(q.answer)) correct = true;
         state.result.perQuestion[q.n] = {
           n: q.n, section: q.section, type: q.type, type_label: q.type_label,
-          userAnswer: ua, correctAnswer: q.a, correct
+          userAnswer: ua, correctAnswer: q.answer, correct
         };
       });
 
@@ -182,7 +183,20 @@ export function createApp(config) {
 
       // UI 렌더링
       renderResult();
-      renderAIReport(sData.subject_report_md || "", "DB Saved", null);
+      // 저장된 sectionNotes를 DB에서 파싱하여 섹션 카드에 주입
+      let savedSectionNotes = null;
+      if (sData.subject_report_md) {
+        const sectionMatch = sData.subject_report_md.match(/===SECTION_DETAIL_START===([\s\S]*?)===SECTION_DETAIL_END===/);
+        if (sectionMatch) {
+          savedSectionNotes = {};
+          const sectionRegex = /\[SECTION_([A-G])\]([\s\S]*?)(?=\[SECTION_[A-G]\]|$)/g;
+          let m;
+          while ((m = sectionRegex.exec(sectionMatch[1])) !== null) {
+            savedSectionNotes[m[1]] = m[2].trim();
+          }
+        }
+      }
+      renderAIReport(sData.subject_report_md || "", "DB Saved", savedSectionNotes);
 
       // 관리자 뷰어에서는 하단에 닫기 버튼 추가
       const actions = $(".report-actions");
@@ -810,8 +824,8 @@ export function createApp(config) {
 
     // ── 1) 정규분포 곡선 차트 ──
     const bellWrap = el("div", { class: "comparison-chart-box" });
-    const bellTitle = el("div", { class: "comparison-chart-title" }, "총점 분포 내 위치");
-    const bellSubtitle = el("div", { class: "comparison-chart-subtitle" }, `강남 1000명 기준 · 상위 ${pctRank}%`);
+    const bellTitle = el("div", { class: "comparison-chart-title" }, "내 성적");
+    const bellSubtitle = el("div", { class: "comparison-chart-subtitle" }, `서울 강남 기준 · 상위 ${pctRank}%`);
     const bellCanvas = el("canvas", { id: "chart-bell" });
     bellWrap.append(bellTitle, bellSubtitle, bellCanvas);
 
@@ -844,7 +858,7 @@ export function createApp(config) {
           labels: xs,
           datasets: [
             {
-              label: "점수 분포",
+              label: "전체 분포",
               data: ys,
               borderColor: "rgba(107, 93, 82, 0.5)",
               backgroundColor: "rgba(107, 93, 82, 0.08)",
@@ -854,7 +868,7 @@ export function createApp(config) {
               tension: 0.4,
             },
             {
-              label: `내 점수 (${totalScore}점 · 상위 ${pctRank}%)`,
+              label: `내 성적 (${totalScore}점 · 상위 ${pctRank}%)`,
               data: studentYs,
               borderColor: "#c4711f",
               backgroundColor: "#c4711f",
@@ -873,11 +887,11 @@ export function createApp(config) {
               min: 40, max: 100,
               ticks: {
                 stepSize: 10,
-                font: { family: "'Inter', sans-serif", size: 10 },
+                font: { family: "'Inter', sans-serif", size: 12 },
                 color: "rgba(107, 93, 82, 0.7)"
               },
               grid: { color: "rgba(107, 93, 82, 0.08)" },
-              title: { display: true, text: "총점", font: { size: 11 }, color: "rgba(107, 93, 82, 0.6)" }
+              title: { display: true, text: "총점", font: { family: "'Noto Sans KR', sans-serif", size: 15, weight: "600" }, color: "rgba(107, 93, 82, 0.8)" }
             },
             y: {
               display: false,
@@ -886,7 +900,7 @@ export function createApp(config) {
           plugins: {
             legend: {
               position: "bottom",
-              labels: { font: { family: "'Noto Sans KR', sans-serif", size: 11 }, boxWidth: 10, usePointStyle: true }
+              labels: { font: { family: "'Noto Sans KR', sans-serif", size: 14 }, boxWidth: 14, usePointStyle: true, padding: 20 }
             },
             tooltip: {
               callbacks: {
@@ -917,7 +931,7 @@ export function createApp(config) {
           labels: radarLabels,
           datasets: [
             {
-              label: "강남 상위 10%",
+              label: "서울 강남 상위 10%",
               data: top10Radar,
               borderColor: "rgba(107, 93, 82, 0.5)",
               backgroundColor: "rgba(107, 93, 82, 0.12)",
@@ -942,16 +956,16 @@ export function createApp(config) {
           scales: {
             r: {
               min: 0, max: 100,
-              ticks: { stepSize: 25, font: { size: 9 }, color: "rgba(107, 93, 82, 0.5)", backdropColor: "transparent" },
+              ticks: { stepSize: 25, font: { size: 11 }, color: "rgba(107, 93, 82, 0.5)", backdropColor: "transparent" },
               grid: { color: "rgba(107, 93, 82, 0.12)" },
               angleLines: { color: "rgba(107, 93, 82, 0.15)" },
-              pointLabels: { font: { family: "'Noto Sans KR', sans-serif", size: 10, weight: "500" }, color: "rgba(26, 22, 18, 0.75)" }
+              pointLabels: { font: { family: "'Noto Sans KR', sans-serif", size: 15, weight: "700" }, color: "rgba(26, 22, 18, 0.9)" }
             }
           },
           plugins: {
             legend: {
               position: "bottom",
-              labels: { font: { family: "'Noto Sans KR', sans-serif", size: 11 }, boxWidth: 10, usePointStyle: true }
+              labels: { font: { family: "'Noto Sans KR', sans-serif", size: 13 }, boxWidth: 12, usePointStyle: true, padding: 16 }
             }
           }
         }
@@ -1375,6 +1389,18 @@ export function createApp(config) {
 
       // 결과를 DB 및 localStorage에 저장
       try {
+        const sectionNotes = data.sectionNotes || {};
+        // Admin 뷰어에서 파싱할 수 있도록 SECTION_DETAIL 블록을 markdown 하단에 첨부하여 저장
+        let fullReportMd = reportMarkdown;
+        if (Object.keys(sectionNotes).length > 0) {
+          let sectionBlock = "\n\n===SECTION_DETAIL_START===\n";
+          Object.entries(sectionNotes).forEach(([id, note]) => {
+            sectionBlock += `[SECTION_${id}]\n${note}\n`;
+          });
+          sectionBlock += "===SECTION_DETAIL_END===";
+          fullReportMd += sectionBlock;
+        }
+
         saveResultToDB(
           {
             studentId: state.studentId,
@@ -1396,7 +1422,7 @@ export function createApp(config) {
             regionAbs: state.result.regionAbs,
             wordIntensity: state.result.wordIntensity,
             perSection: state.result.perSection,
-            subjectReportMd: reportMarkdown,
+            subjectReportMd: fullReportMd,
           }
         );
       } catch (e) {
