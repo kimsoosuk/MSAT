@@ -749,7 +749,7 @@
     }
 
     /* ============ Mini markdown ============ */
-    function miniMarkdown(md) {
+      function miniMarkdown(md) {
       md = md.replace(/\r\n/g, "\n");
       md = md.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const blocks = md.split(/\n{2,}/);
@@ -757,8 +757,8 @@
         block = block.trim();
         if (!block) return "";
         if (/^###\s+/.test(block))  return `<h4>${inline(block.replace(/^###\s+/, ""))}</h4>`;
-        if (/^##\s+/.test(block))   return `<h3 class="page-break-before">${inline(block.replace(/^##\s+/, ""))}</h3>`;
-        if (/^#\s+/.test(block))    return `<h3 class="page-break-before">${inline(block.replace(/^#\s+/, ""))}</h3>`;
+        if (/^##\s+/.test(block))   return `<h3>${inline(block.replace(/^##\s+/, ""))}</h3>`;
+        if (/^#\s+/.test(block))    return `<h3>${inline(block.replace(/^#\s+/, ""))}</h3>`;
         if (/^(\-|\*)\s+/m.test(block) && block.split("\n").every(l => /^(\-|\*)\s+|^\s*$/.test(l))) {
           const items = block.split("\n").filter(l => l.trim()).map(l => `<li>${inline(l.replace(/^(\-|\*)\s+/, ""))}</li>`).join("");
           return `<ul>${items}</ul>`;
@@ -798,17 +798,16 @@
           onclone: (clonedDoc) => {
             const s = clonedDoc.createElement('style');
             s.textContent = [
-              'body::before { display:none !important; }',
-              'body, .app, #view-result { background: #faf6ef !important; overflow: visible !important; height: auto !important; }',
-              '* { -webkit-text-stroke: 0.3px currentColor; }',
+              'html, body { margin: 0 !important; padding: 0 !important; background: #faf6ef !important; overflow: visible !important; height: auto !important; }',
+              '.app, #view-result { background: #faf6ef !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; height: auto !important; }',
+              '* { -webkit-text-stroke: 0.3px currentColor; box-sizing: border-box !important; }',
               '.page-break-before { page-break-before: always !important; break-before: page !important; }',
-              '.section-heading { page-break-before: always !important; break-before: page !important; page-break-after: avoid !important; break-after: avoid !important; margin-top: 30px; margin-bottom: 20px; }',
-              '.region-card { page-break-inside: avoid !important; break-inside: avoid !important; margin-bottom: 15px; }',
-              '.radar-wrap { page-break-inside: avoid !important; break-inside: avoid !important; margin-bottom: 30px; }',
-              '.ai-report-section-wrap { page-break-inside: avoid !important; break-inside: avoid !important; margin: 10px 0 30px; }',
-              '.ai-report-card { page-break-inside: avoid !important; break-inside: avoid !important; border: 1px solid #d9cfbe; }',
-              '.ai-report-card h3, .ai-report-card h4 { page-break-after: avoid !important; break-after: avoid !important; }',
-              '.ai-report-card p, .ai-report-card ul, .ai-report-card ol, .ai-report-card li { page-break-inside: avoid !important; break-inside: avoid !important; }',
+              '.section-heading { page-break-before: always !important; break-before: page !important; page-break-after: avoid !important; margin: 40px 0 20px !important; display: block !important; }',
+              '.region-card, .radar-wrap { page-break-inside: avoid !important; margin-bottom: 20px !important; }',
+              '.ai-report-section-wrap { page-break-inside: auto !important; margin: 10px 0 30px !important; }',
+              '.ai-report-card { page-break-inside: auto !important; border: 1px solid #d9cfbe; }',
+              '.ai-report-card h3, .ai-report-card h4 { page-break-after: avoid !important; page-break-inside: avoid !important; }',
+              '.ai-report-card p, .ai-report-card ul, .ai-report-card ol, .ai-report-card li { page-break-inside: avoid !important; margin-bottom: 8px !important; }',
               '.global-footer { display: none !important; }',
             ].join('\n');
             clonedDoc.head.appendChild(s);
